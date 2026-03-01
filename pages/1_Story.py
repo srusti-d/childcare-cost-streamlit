@@ -39,3 +39,8 @@ st.header("4) Precipitation vs temperature")
 st.write("We wish to test a plausible explanation: are the warmest days also the driest (or not)?")
 st.altair_chart(chart_explain_precip_vs_temp(df), use_container_width=True)
 st.caption("Takeaway: The relationship is noisy — precipitation alone does not explain extreme heat, motivating more fine-grained exploration.")
+
+st.header("5, Exercise 7) Extreme daily temperature differences by weather type")
+st.write("We wish to see whether certain weather types have more extreme ranges in daily temperature.")
+st.altair_chart(chart_bar_temp_diff(df), use_container_width=True)
+st.caption("Takeaway: When the weather is sunny, there tends to be the most extreme average differences in temperature across days.")
