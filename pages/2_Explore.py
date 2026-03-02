@@ -40,7 +40,7 @@ st.write("Brush referees to filter the scatter plot by matches refereed by the s
 st.markdown("**Guided prompts:**")
 st.write("- Which referee awards the most penalties on average?")
 st.write("- Do high-foul matches always result in more cards, or does it vary by referee?")
-st.altair_chart(chart_referee_penalties(szn_2425_df, melted_df), use_container_width=True)
+st.altair_chart(chart_referee_penalties(szn_2425_df, melted_df))
 st.caption("Takeaway: Certain referees consistently award more penalties. High-foul matches don't always produce high card counts. There does not appear to be a significant trend in the teams in the extreme penalty matches.")
 with st.expander("Interesting details related to the takeaway in the interactive plot:"):
     st.write("Though some referees have higher average penalties (both fouls & cards), the extreme points with high fouls and cards don't have a large imbalance in which team (home versus away) are being given these penalties. Generally, there is an equal distribution of penalties between the teams for high foul + high card matches.")
