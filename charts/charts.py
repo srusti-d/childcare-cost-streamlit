@@ -119,5 +119,5 @@ def chart_referee_penalties(szn_2425_df: pd.DataFrame, melted_df: pd.DataFrame) 
                         scale=alt.Scale(domain=['Home Team', 'Away Team'], range=['blue', 'red']),
                         legend=alt.Legend(title='Team'))
     ).properties(width=250, height=400, title='Selected Match Penalty Breakdown')
-
-    return (ref_chart | match_plot | penalty_plot).resolve_scale(x='independent')
+    return ref_chart, match_plot, penalty_plot
+    #return (ref_chart | match_plot | penalty_plot).resolve_scale(x='independent')

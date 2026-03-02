@@ -9,8 +9,6 @@ both_szns_df, szn_2425_df, teams_rcards_df, teams_wins_df, melted_df = load_data
 st.title("A Data Story: English Premier League Patterns")
 st.markdown("**Central question:** *How do team performance, disciplinary action, and referee behaviour shape outcomes across the 2023-24 and 2024-25 seasons?*")
 
-both_szns_df, szn_2425_df, teams_rcards_df, teams_wins_df, melted_df = load_data()  # unpack all created dataframes from load_data
-
 st.header("1) Home vs Away Performance by Season")
 st.write("Switch between seasons and select a team to follow their home and away win trajectory month by month.")
 st.markdown("**Guided prompts:**")
@@ -40,7 +38,15 @@ st.write("Brush referees to filter the scatter plot by matches refereed by the s
 st.markdown("**Guided prompts:**")
 st.write("- Which referee awards the most penalties on average?")
 st.write("- Do high-foul matches always result in more cards, or does it vary by referee?")
-st.altair_chart(chart_referee_penalties(szn_2425_df, melted_df))
+# st.altair_chart(chart_referee_penalties(szn_2425_df, melted_df))
+ref_chart, match_plot, penalty_plot = chart_referee_penalties(szn_2425_df, melted_df)
+col1, col2, col3 = st.columns([1.5, 2, 1.2])
+with col1:
+    st.altair_chart(ref_chart)
+with col2:
+    st.altair_chart(match_plot)
+with col3:
+    st.altair_chart(penalty_plot)
 st.caption("Takeaway: Certain referees consistently award more penalties. High-foul matches don't always produce high card counts. There does not appear to be a significant trend in the teams in the extreme penalty matches.")
 with st.expander("Interesting details related to the takeaway in the interactive plot:"):
     st.write("Though some referees have higher average penalties (both fouls & cards), the extreme points with high fouls and cards don't have a large imbalance in which team (home versus away) are being given these penalties. Generally, there is an equal distribution of penalties between the teams for high foul + high card matches.")
