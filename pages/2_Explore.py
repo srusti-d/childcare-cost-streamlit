@@ -1,10 +1,10 @@
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 import io_ as io
 import charts
 
-
 # Page config
-
 st.set_page_config(page_title="Explore Childcare Cost Analysis", layout="wide")
 
 # Load data 
