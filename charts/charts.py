@@ -2,6 +2,7 @@ import altair as alt
 import pandas as pd
 import geopandas as gpd
 
+import logging
 from utils.data_io import normalize_features_to_unit_box
 
 def base_theme():
@@ -16,7 +17,9 @@ def base_theme():
 def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
     """
     Line chart of average national childcare cost (mcsa) over time.
-    """
+    """ 
+    logging.info('debugging')
+
     line = (
         alt.Chart(cost_trend)
         .mark_line(point=alt.OverlayMarkDef(filled=True, size=60), color="steelblue")
@@ -67,7 +70,7 @@ def make_sliding_choropleth_maps(
     geo_features:  list,
     state_metrics: pd.DataFrame,
     geojson_url:   str | None = None,
-) -> alt.VConcatChart:
+): #-> alt.VConcatChart:
     """
     Three choropleth maps sharing a year slider for average weekly center-based childcare cost,
     average female labor force participation rate (ages 20-64), and average poverty rate for families.
@@ -89,6 +92,7 @@ def make_sliding_choropleth_maps(
         name="selected_year", value=int(min(years)), bind=year_slider
     )
     year_filter = "toNumber(datum.properties.study_year) == selected_year"
+
 
     # Childcare cost
     childcare_chart = (
@@ -182,12 +186,14 @@ def make_sliding_choropleth_maps(
 
     bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
 
-    return (
+    final_chart = (
         alt.vconcat(childcare_chart, bottom_row)
         .add_params(year_selection)
         .resolve_scale(color="independent")
-        .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S.")
+        .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S."),
     )
+    return final_chart, geo_data
+
 
 
 # Urban/rural state county maps in an 8-state panel
