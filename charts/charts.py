@@ -14,6 +14,66 @@ def base_theme():
     }
 
 
+def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
+    """
+    Line chart of average national childcare cost (mcsa) over time with a
+    shaded band marking the 2008-2010 financial crisis period.
+    """
+    recession = pd.DataFrame({"x1": [2008], "x2": [2010]})
+    band = (
+        alt.Chart(recession)
+        .mark_rect(opacity=0.15, color="gray")
+        .encode(x=alt.X("x1:Q", title=""), x2="x2:Q")
+    )
+
+    recession_label = pd.DataFrame({
+        "x":    [2009],
+        "y":    [float(cost_trend["mcsa"].max()) * 0.98],
+        "text": ["Financial Crisis"],
+    })
+    annotation = (
+        alt.Chart(recession_label)
+        .mark_text(color="gray", fontSize=11, fontStyle="italic")
+        .encode(x="x:Q", y="y:Q", text="text:N")
+    )
+
+    line = (
+        alt.Chart(cost_trend)
+        .mark_line(point=alt.OverlayMarkDef(filled=True, size=60), color="steelblue")
+        .encode(
+            x=alt.X(
+                "study_year:Q",
+                title="Year",
+                axis=alt.Axis(format="d", tickCount=int(cost_trend["study_year"].nunique())),
+            ),
+            y=alt.Y(
+                "mcsa:Q",
+                title="Average Childcare Cost (mcsa)",
+                scale=alt.Scale(
+                    zero=False,
+                    domain=[
+                        float(cost_trend["mcsa"].min()) * 0.95,
+                        float(cost_trend["mcsa"].max()) * 1.05,
+                    ],
+                ),
+            ),
+            tooltip=[
+                alt.Tooltip("study_year:Q", title="Year"),
+                alt.Tooltip("mcsa:Q", title="Avg Childcare Cost", format=".2f"),
+            ],
+        )
+    )
+
+    return (
+        alt.layer(band, annotation, line)
+        .properties(
+            width=680, height=380,
+            title="Average National Childcare Cost Trend with Financial Crisis Period",
+        )
+        .resolve_scale(y="shared")
+    )
+
+
 def _prep_heatmap_df(county_avg: pd.DataFrame) -> pd.DataFrame:
     """Rename columns to display-friendly labels and keep Urban/Rural rows."""
     df = county_avg.rename(columns={
@@ -46,51 +106,94 @@ def make_sliding_choropleth_maps(
     )
     year_filter = "toNumber(datum.properties.study_year) == selected_year"
 
-    def _base_map(field, scheme, domain, legend_title):
-        return (
-            alt.Chart(geo_data)
-            .mark_geoshape(stroke="white", strokeWidth=0.5)
-            .transform_filter(year_filter)
-            .encode(
-                color=alt.Color(
-                    f"properties.{field}:Q",
-                    scale=alt.Scale(scheme=scheme, domain=domain),
-                    title=legend_title,
+    # Childcare cost
+    childcare_chart = (
+        alt.Chart(geo_data)
+        .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .transform_filter(year_filter)
+        .encode(
+            color=alt.Color(
+                "properties.mcsa_mean:Q",
+                scale=alt.Scale(
+                    scheme="blues",
+                    domain=[
+                        float(state_metrics["mcsa_mean"].min()),
+                        float(state_metrics["mcsa_mean"].max()),
+                    ],
                 ),
-                tooltip=[
-                    alt.Tooltip("properties.state_name:N", title="State"),
-                    alt.Tooltip(f"properties.{field}:Q",   title=legend_title if isinstance(legend_title, str) else legend_title[0], format=".2f"),
-                    alt.Tooltip("properties.study_year:Q", title="Year"),
-                ],
-            )
-            .project(type="albersUsa")
+                title=["Average Weekly", "Childcare Cost (Center-Based)"],
+            ),
+            tooltip=[
+                alt.Tooltip("properties.state_name:N", title="State"),
+                alt.Tooltip("properties.mcsa_mean:Q",  title="Avg Weekly Childcare Cost", format=".2f"),
+                alt.Tooltip("properties.study_year:Q", title="Year"),
+            ],
         )
-
-    childcare_chart = _base_map(
-        "mcsa_mean", "blues",
-        [state_metrics["mcsa_mean"].min(), state_metrics["mcsa_mean"].max()],
-        ["Average Weekly", "Childcare Cost (Center-Based)"],
-    ).properties(
-        width=450, height=280,
-        title="Average weekly center-based childcare cost (school-age children) by state over a decade",
+        .project(type="albersUsa")
+        .properties(
+            width=450, height=280,
+            title="Average weekly center-based childcare cost (school-age children) by state over a decade",
+        )
     )
 
-    poverty_chart = _base_map(
-        "pr_f_mean", "oranges",
-        [state_metrics["pr_f_mean"].min(), state_metrics["pr_f_mean"].max()],
-        "Average poverty rate for families",
-    ).properties(
-        width=450, height=280,
-        title="Average poverty rate for families by state over a decade",
+    # Poverty rate
+    poverty_chart = (
+        alt.Chart(geo_data)
+        .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .transform_filter(year_filter)
+        .encode(
+            color=alt.Color(
+                "properties.pr_f_mean:Q",
+                scale=alt.Scale(
+                    scheme="oranges",
+                    domain=[
+                        float(state_metrics["pr_f_mean"].min()),
+                        float(state_metrics["pr_f_mean"].max()),
+                    ],
+                ),
+                title="Average poverty rate for families",
+            ),
+            tooltip=[
+                alt.Tooltip("properties.state_name:N", title="State"),
+                alt.Tooltip("properties.pr_f_mean:Q",  title="Average poverty rate for families", format=".2f"),
+                alt.Tooltip("properties.study_year:Q", title="Year"),
+            ],
+        )
+        .project(type="albersUsa")
+        .properties(
+            width=450, height=280,
+            title="Average poverty rate for families by state over a decade",
+        )
     )
 
-    labor_chart = _base_map(
-        "flfpr_20to64_mean", "purples",
-        [state_metrics["flfpr_20to64_mean"].min(), state_metrics["flfpr_20to64_mean"].max()],
-        ["Average female labor", "participation rate (20-64 y/o)"],
-    ).properties(
-        width=500, height=300,
-        title="Average female labor participation rate (20-64 y/o) by state over a decade",
+    # Female LFPR
+    labor_chart = (
+        alt.Chart(geo_data)
+        .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .transform_filter(year_filter)
+        .encode(
+            color=alt.Color(
+                "properties.flfpr_20to64_mean:Q",
+                scale=alt.Scale(
+                    scheme="purples",
+                    domain=[
+                        float(state_metrics["flfpr_20to64_mean"].min()),
+                        float(state_metrics["flfpr_20to64_mean"].max()),
+                    ],
+                ),
+                title=["Average female labor", "participation rate (20-64 y/o)"],
+            ),
+            tooltip=[
+                alt.Tooltip("properties.state_name:N",        title="State"),
+                alt.Tooltip("properties.flfpr_20to64_mean:Q", title="Average female labor participation rate", format=".2f"),
+                alt.Tooltip("properties.study_year:Q",        title="Year"),
+            ],
+        )
+        .project(type="albersUsa")
+        .properties(
+            width=500, height=300,
+            title="Average female labor participation rate (20-64 y/o) by state over a decade",
+        )
     )
 
     bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
@@ -103,7 +206,7 @@ def make_sliding_choropleth_maps(
     )
 
 
-# 2.  Urban/rural state county maps in an 8-state panel
+# Urban/rural state county maps in an 8-state panel
 
 def make_urban_rural_state_maps(
     county_avg:       pd.DataFrame,
@@ -191,8 +294,8 @@ def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
     )
 
     recession_label = pd.DataFrame({
-        "x": [2009],
-        "y": [cost_trend["mcsa"].max() * 0.98],
+        "x":    [2009],
+        "y":    [float(cost_trend["mcsa"].max()) * 0.98],
         "text": ["Financial Crisis"],
     })
     annotation = (
@@ -208,9 +311,19 @@ def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
             x=alt.X(
                 "study_year:Q",
                 title="Year",
-                axis=alt.Axis(format="d", tickCount=cost_trend["study_year"].nunique()),
+                axis=alt.Axis(format="d", tickCount=int(cost_trend["study_year"].nunique())),
             ),
-            y=alt.Y("mcsa:Q", title="Average Childcare Cost (mcsa)", scale=alt.Scale(zero=False)),
+            y=alt.Y(
+                "mcsa:Q",
+                title="Average Childcare Cost (mcsa)",
+                scale=alt.Scale(
+                    zero=False,
+                    domain=[
+                        float(cost_trend["mcsa"].min()) * 0.95,
+                        float(cost_trend["mcsa"].max()) * 1.05,
+                    ],
+                ),
+            ),
             tooltip=[
                 alt.Tooltip("study_year:Q", title="Year"),
                 alt.Tooltip("mcsa:Q",       title="Avg Childcare Cost", format=".2f"),
@@ -226,7 +339,6 @@ def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
         )
         .resolve_scale(y="shared")
     )
-
 
 # Heatmap graphs of childcare cost vs poverty rate
 
