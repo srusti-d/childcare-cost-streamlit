@@ -267,8 +267,8 @@ def make_urban_rural_state_maps(
         )
         charts_list.append(ch)
 
-    row1 = alt.hconcat(*charts[:4], spacing=10)
-    row2 = alt.hconcat(*charts[4:], spacing=10)
+    row1 = alt.hconcat(*charts_list[:4], spacing=10)
+    row2 = alt.hconcat(*charts_list[4:], spacing=10)
     return (
         alt.vconcat(row1, row2, spacing=14)
         .configure_view(stroke=None)
