@@ -1,52 +1,135 @@
 import streamlit as st
-from utils.io import load_data
-from charts.charts import chart_home_away_wins, chart_red_cards_wins, chart_referee_penalties
+import io_ as io
+import charts
 
 
-st.set_page_config(page_title="Data Story & Interactive Exploration", layout="wide")
-both_szns_df, szn_2425_df, teams_rcards_df, teams_wins_df, melted_df = load_data() 
+# Page config
 
-st.title("A Data Story: English Premier League Patterns")
-st.markdown("**Central question:** *How do team performance, disciplinary action, and referee behaviour shape outcomes across the 2023-24 and 2024-25 seasons?*")
+st.set_page_config(page_title="Explore Childcare Cost Analysis", layout="wide")
 
-st.header("1) Home vs Away Performance by Season")
-st.write("Switch between seasons and select a team to follow their home and away win trajectory month by month.")
-st.markdown("**Guided prompts:**")
-st.write("- Does your selected team perform better at home or away? Does this change between seasons?")
-st.write("- Which teams show the biggest home/away performance gap?")
-st.altair_chart(chart_home_away_wins(both_szns_df), use_container_width=True)
-st.caption("Takeaway: Generally, there appears to be consistency in how well a team performs in both home and away games - though there are some exceptions. While most teams perform similarly in both seasons, certain teams also perform distinctly better/worse between the seasons.") 
-with st.expander("Interesting caveats from the takeaway and details in the interactive plot:"):
-    st.write("Not all teams maintain the same success in performance between home and away games. Select Newcastle team and the filter for the 2023-24 Season. We can see that there is a clear home advantage for Newcastle's performance in the 2023-24 season. However, this home advantage is not as prominent in the 2024-25 season. Between seasons, Arsenal has about the same level of success. However, Nott'm Forest has a much improved performance in both home and away games from the 2023-24 season to the 2024-25 season.")
+# Load data 
+
+@st.cache_data(show_spinner="Loading and preprocessing data…")
+def get_data():
+    return io.load_and_preprocess_all(
+        childcare_path="./data/childcare_costs.csv",
+        counties_path ="./data/counties.csv",
+        rucc_path     ="./data/Ruralurbancontinuumcodes2023.csv",
+        geojson_path  ="./data/geojson-counties-fips.json",
+    )
+
+if "data" not in st.session_state:
+    st.session_state["data"] = get_data()
+
+data = st.session_state["data"]
+
+st.title("Exploring U.S. Childcare Costs (2008–2018)")
+st.markdown(
+    """
+    This page walks through five visualisations that together tell the story of
+    how childcare costs relate to poverty, female labour-force participation, and
+    across the United States over a decade and within varying rural/urban geography.
+    Many of these plots are interactive.
+    """
+)
+
+st.divider()
+
+# National average childcare cost trend
+
+st.header("National Average Childcare Cost Over Time")
+st.markdown(
+    """
+    The line below tracks the **national average weekly center-based childcare
+    cost (mcsa)** from 2008 to 2018.  The shaded band marks the 2008–2010
+    financial-crisis window. Hover over any point to see the exact value.
+    """
+)
+
+cost_chart = charts.make_cost_trend_line(data["cost_trend"])
+st.altair_chart(cost_chart, use_container_width=True)
+
+st.divider()
 
 
-st.header("2) Do Red Cards Cost Teams Wins?")
-st.write("After exploring team performance across seasons and in both home/away teams, we can narrow down on exploring match-specific factors that may contribute to the pattern of wins. We examine whether teams that accumulate more red cards tend to win less over the 2024-25 season. Brush over teams in the bar chart to highlight their win trajectories.")
-st.write("Brush over teams in the bar chart to highlight their win trajectory in the line chart.")
-st.markdown("**Guided prompts:**")
-st.write("- Do the most disciplined teams consistently win more?")
-st.write("- Are there any surprising outliers — high cards but high wins, or vice versa?")
-st.altair_chart(chart_red_cards_wins(teams_rcards_df, teams_wins_df), use_container_width=True)
-st.caption("Takeaway: The relationship is not straightforward — some high-card teams still perform well, suggesting other factors dominate.")
-with st.expander("Interesting details related to the takeaway in the interactive plot:"):
-    st.write("The top two teams with the highest red card penalty count are Arsenal and Ipswich. Both have very different trajectories in the 2024-25 season. Arsenal is top 3 in the # of cumulative wins throughout the season. Ipswich is second to last in team performance in the season.")
+# State-level choropleth maps with year slider
+
+st.header("Childcare Cost, Female LFPR & Poverty Rate by State")
+st.markdown(
+    """
+    Use the **Year** slider to step through each study year and compare how
+    three state-level metrics change together:
+
+    * **Center-based childcare cost** 
+    * **Female labor-force participation rate** for women aged 20–64
+    * **Family poverty rate**
+    """
+)
+
+choropleth = charts.make_sliding_choropleth_maps(data["geo_features"], data["state_metrics"])
+st.altair_chart(choropleth, use_container_width=False)
+
+st.divider()
 
 
-st.header("3) Referee Strictness and Match-Level Penalties")
-st.write("Now that we have explored the lack of a strong relationship between frequency of red cards and team performance across a season, we can further examine the factors that actually contribute the the frequency of red cards at a match-specific level. Here, we look at how referees differ in the penalties they award, and whether fouls and cards are more extreme in specific matches. Brush referees on the left, then click a match point to see its penalty breakdown by team within that match.")
-st.write("Brush referees to filter the scatter plot by matches refereed by the selected individual, then click a match to inspect its penalty breakdown by home and away team.")
-st.markdown("**Guided prompts:**")
-st.write("- Which referee awards the most penalties on average?")
-st.write("- Do high-foul matches always result in more cards, or does it vary by referee?")
-# st.altair_chart(chart_referee_penalties(szn_2425_df, melted_df))
-ref_chart, match_plot, penalty_plot = chart_referee_penalties(szn_2425_df, melted_df)
-col1, col2, col3 = st.columns([1.5, 2, 1.2])
-with col1:
-    st.altair_chart(ref_chart)
-with col2:
-    st.altair_chart(match_plot)
-with col3:
-    st.altair_chart(penalty_plot)
-st.caption("Takeaway: Certain referees consistently award more penalties. High-foul matches don't always produce high card counts. There does not appear to be a significant trend in the teams in the extreme penalty matches.")
-with st.expander("Interesting details related to the takeaway in the interactive plot:"):
-    st.write("Though some referees have higher average penalties (both fouls & cards), the extreme points with high fouls and cards don't have a large imbalance in which team (home versus away) are being given these penalties. Generally, there is an equal distribution of penalties between the teams for high foul + high card matches.")
+# Section 3 — Urban vs rural county classification maps
+
+st.header("3 · Urban vs Rural Counties — 8-State Sample")
+st.markdown(
+    """
+    Counties are classified as **Urban** (USDA RUCC code ≤ 3) or **Rural**
+    (code ≥ 4) using the 2023 Rural-Urban Continuum Codes.  The sample covers
+    four predominantly urban states (California, New York, New Jersey,
+    Massachusetts) and four predominantly rural states (North Dakota, South
+    Dakota, Vermont, Wyoming) to provide a balanced geographic comparison.
+    You can hover over any county to see its average childcare cost, poverty rate, and
+    female LFPR.
+    """
+)
+
+urb_rural = charts.make_urban_rural_state_maps(
+    data["county_avg"],
+    data["geo_counties_raw"],
+    data["sample_states"],
+)
+st.altair_chart(urb_rural, use_container_width=False)
+
+st.divider()
+
+
+# Density heatmaps (poverty + LFPR)
+
+st.header("Childcare Cost vs Poverty Rate & Female LFPR")
+st.markdown(
+    """
+    Each small colored box point in the heatmap shows how many counties fall into that
+    cost vs predictor bin.  Overlaid regression lines show whether the
+    **Urban** and **Rural** trends differ in slope or direction.
+
+    **Top chart** — childcare cost vs family poverty rate
+    **Bottom chart** — childcare cost vs female labor-force participation rate
+    """
+)
+
+heatmaps = charts.make_heatmap_stacked(data["county_avg"])
+st.altair_chart(heatmaps, use_container_width=True)
+
+st.divider()
+
+st.header("Interactive County-Level Dashboard")
+st.markdown(
+    """
+    This dashboard lets you drill from the national picture down to individual
+    counties.
+
+    1. Choose a **year** with the slider and a **state group** (Urban- or
+       Rural-majority states) from the dropdown.
+    2. **Click a state** on the map to filter the scatter plot (showing childcare cost vs poverty rate) and bar chart
+       to that state's counties.
+    3. **Click a county** in the scatter plot to compare its female labor force participation rate
+       against its state average in the bar chart.
+    """
+)
+
+dashboard = charts.make_county_dashboard(data["geo_merged"])
+st.altair_chart(dashboard, use_container_width=False)
