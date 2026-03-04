@@ -2,6 +2,8 @@ import streamlit as st
 from utils import data_io as io
 import charts
 
+
+
 GEOJSON_URL = "https://raw.githubusercontent.com/srusti-d/childcare-cost-streamlit/main/data/geojson-counties-fips.json"
 
 # Page config
@@ -22,6 +24,9 @@ if "data" not in st.session_state:
     st.session_state["data"] = get_data()
 
 data = st.session_state["data"]
+
+
+
 
 st.title("Exploring U.S. Childcare Costs (2008–2018)")
 st.markdown(
@@ -68,11 +73,13 @@ st.markdown(
 
 choropleth = charts.make_sliding_choropleth_maps(
     data["geo_features"],
-    data["state_metrics"]
+    data["state_metrics"],
+    
 )
 st.altair_chart(choropleth, use_container_width=False)
 
 st.divider()
+
 
 # Urban vs rural county classification maps
 
@@ -92,7 +99,8 @@ st.markdown(
 urb_rural = charts.make_urban_rural_state_maps(
     data["county_avg"],
     data["geo_counties_raw"],
-    data["sample_states"]
+    data["sample_states"],
+
 )
 st.altair_chart(urb_rural, use_container_width=False)
 
@@ -121,7 +129,8 @@ st.divider()
 st.header("Interactive County-Level Dashboard")
 st.markdown(
     """
-    This dashboard lets you select from the national picture down to individual counties.
+    This dashboard lets you drill from the national picture down to individual
+    counties.
 
     1. Choose a **year** with the slider and a **state group** (Urban- or
        Rural-majority states) from the dropdown.

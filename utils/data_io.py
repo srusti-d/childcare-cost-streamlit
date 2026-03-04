@@ -361,6 +361,7 @@ def load_and_preprocess_all(
     df_rucc_valid  = build_rucc_panel(dm, raw["rucc"])
     county_avg, state_avg = build_sample_county_avg(df_rucc_valid, sample_states)
     geo_merged     = build_geo_merged(df_rucc_valid, raw["geo_counties_raw"])
+    geo_merged_json   = json.loads(geo_merged.to_json())
     cost_trend     = build_cost_trend(dm)
 
     return {
@@ -376,5 +377,6 @@ def load_and_preprocess_all(
         "geo_merged":       geo_merged,
         "cost_trend":       cost_trend,
         "geo_counties_raw": raw["geo_counties_raw"],
+        "geo_merged_json":  geo_merged_json,
         "sample_states":    sample_states,
     }

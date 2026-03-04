@@ -2,7 +2,6 @@ import altair as alt
 import pandas as pd
 import geopandas as gpd
 
-import logging
 from utils.data_io import normalize_features_to_unit_box
 
 def base_theme():
@@ -17,9 +16,7 @@ def base_theme():
 def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
     """
     Line chart of average national childcare cost (mcsa) over time.
-    """ 
-    logging.info('debugging')
-
+    """
     line = (
         alt.Chart(cost_trend)
         .mark_line(point=alt.OverlayMarkDef(filled=True, size=60), color="steelblue")
@@ -70,7 +67,7 @@ def make_sliding_choropleth_maps(
     geo_features:  list,
     state_metrics: pd.DataFrame,
     geojson_url:   str | None = None,
-): #-> alt.VConcatChart:
+) -> alt.VConcatChart:
     """
     Three choropleth maps sharing a year slider for average weekly center-based childcare cost,
     average female labor force participation rate (ages 20-64), and average poverty rate for families.
@@ -81,8 +78,10 @@ def make_sliding_choropleth_maps(
             format=alt.DataFormat(property="features", type="json")
         )
     else:
-        geo_data = alt.Data(values=geo_features)
-
+        geo_data = alt.InlineData(
+            values={"type": "FeatureCollection", "features": geo_features},
+            format=alt.DataFormat(type="json", property="features"),
+        )
     years = state_metrics["study_year"].unique()
 
     year_slider = alt.binding_range(
@@ -91,15 +90,18 @@ def make_sliding_choropleth_maps(
     year_selection = alt.param(
         name="selected_year", value=int(min(years)), bind=year_slider
     )
-    year_filter = "toNumber(datum.properties.study_year) == selected_year"
+    year_filter = "datum.properties.study_year == selected_year"
+
 
 
     # Childcare cost
     childcare_chart = (
         alt.Chart(geo_data)
         .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .add_params(year_selection)
         .transform_filter(year_filter)
         .encode(
+            shape="geometry:G",
             color=alt.Color(
                 "properties.mcsa_mean:Q",
                 scale=alt.Scale(
@@ -113,23 +115,32 @@ def make_sliding_choropleth_maps(
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip("properties.mcsa_mean:Q",  title="Avg Weekly Childcare Cost", format=".2f"),
+                alt.Tooltip(
+                    "properties.mcsa_mean:Q",
+                    title="Avg Weekly Childcare Cost",
+                    format=".2f",
+                ),
                 alt.Tooltip("properties.study_year:Q", title="Year"),
             ],
         )
         .project(type="albersUsa")
         .properties(
-            width=450, height=280,
+            width=450,
+            height=280,
             title="Average weekly center-based childcare cost (school-age children) by state over a decade",
         )
     )
+
+
 
     # Poverty rate
     poverty_chart = (
         alt.Chart(geo_data)
         .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .add_params(year_selection)
         .transform_filter(year_filter)
         .encode(
+            shape="geometry:G",
             color=alt.Color(
                 "properties.pr_f_mean:Q",
                 scale=alt.Scale(
@@ -143,23 +154,31 @@ def make_sliding_choropleth_maps(
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip("properties.pr_f_mean:Q",  title="Average poverty rate for families", format=".2f"),
+                alt.Tooltip(
+                    "properties.pr_f_mean:Q",
+                    title="Average poverty rate for families",
+                    format=".2f",
+                ),
                 alt.Tooltip("properties.study_year:Q", title="Year"),
             ],
         )
         .project(type="albersUsa")
         .properties(
-            width=450, height=280,
+            width=450,
+            height=280,
             title="Average poverty rate for families by state over a decade",
         )
     )
+
 
     # Female LFPR
     labor_chart = (
         alt.Chart(geo_data)
         .mark_geoshape(stroke="white", strokeWidth=0.5)
+        .add_params(year_selection)
         .transform_filter(year_filter)
         .encode(
+            shape="geometry:G",
             color=alt.Color(
                 "properties.flfpr_20to64_mean:Q",
                 scale=alt.Scale(
@@ -169,31 +188,34 @@ def make_sliding_choropleth_maps(
                         float(state_metrics["flfpr_20to64_mean"].max()),
                     ],
                 ),
-                title=["Average female labor", "participation rate (20-64 y/o)"],
+                title=["Average female labor", "participation rate (20–64 y/o)"],
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip("properties.flfpr_20to64_mean:Q", title="Average female labor participation rate", format=".2f"),
+                alt.Tooltip(
+                    "properties.flfpr_20to64_mean:Q",
+                    title="Average female labor participation rate",
+                    format=".2f",
+                ),
                 alt.Tooltip("properties.study_year:Q", title="Year"),
             ],
         )
         .project(type="albersUsa")
         .properties(
-            width=500, height=300,
-            title="Average female labor participation rate (20-64 y/o) by state over a decade",
+            width=500,
+            height=300,
+            title="Average female labor participation rate (20–64 y/o) by state over a decade",
         )
     )
 
     bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
 
-    final_chart = (
+    return (
         alt.vconcat(childcare_chart, bottom_row)
         .add_params(year_selection)
         .resolve_scale(color="independent")
-        .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S."),
+        .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S.")
     )
-    return final_chart, geo_data
-
 
 
 # Urban/rural state county maps in an 8-state panel
