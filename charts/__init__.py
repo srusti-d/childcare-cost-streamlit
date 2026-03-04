@@ -304,7 +304,7 @@ def make_heatmap_poverty(county_avg: pd.DataFrame) -> alt.LayerChart:
         )
     )
 
-    return (heat + lines).properties(
+    return (alt.layer(heat, lines).resolve_scale(color="independent")).properties(
         title="Childcare Cost vs Poverty (Density + Urban/Rural Trend Lines)"
     )
 
@@ -339,7 +339,7 @@ def make_heatmap_lfpr(county_avg: pd.DataFrame) -> alt.LayerChart:
         )
     )
 
-    return (heat + lines).resolve_scale(x="shared", y="shared").properties(
+    return (alt.layer(heat, lines).resolve_scale(color="independent")).properties(
         title="Childcare Cost vs Female LFPR (Density + Urban/Rural Trend Lines)"
     )
 
