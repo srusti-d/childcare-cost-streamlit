@@ -247,9 +247,13 @@ def build_sample_county_avg(
     for the sample states (averaged across all study years).
     """
     if sample_states is None:
+        # sample_states = [
+        #     "California", "New York", "New Jersey", "Massachusetts",
+        #     "North Dakota", "South Dakota", "Vermont", "Wyoming",
+        # ]
         sample_states = [
-            "California", "New York", "New Jersey", "Massachusetts",
-            "North Dakota", "South Dakota", "Vermont", "Wyoming",
+            "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
+            "Massachusetts", "California", "Arizona", "Delaware" #urban
         ]
 
     COST, WLF, POV = "mcsa", "flfpr_20to64", "pr_p"
