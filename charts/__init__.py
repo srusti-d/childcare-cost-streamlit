@@ -63,15 +63,174 @@ def _prep_heatmap_df(county_avg: pd.DataFrame) -> pd.DataFrame:
 
 # Sliding state-level choropleth maps
 
+# def make_sliding_choropleth_maps(
+#     geo_features:  list,
+#     state_metrics: pd.DataFrame,
+#     geojson_url:   str | None = None,
+# ) -> alt.VConcatChart:
+#     """
+#     Three choropleth maps sharing a year slider for average weekly center-based childcare cost,
+#     average female labor force participation rate (ages 20-64), and average poverty rate for families.
+#     """
+#     if geojson_url is not None:
+#         geo_data = alt.UrlData(
+#             url=geojson_url,
+#             format=alt.DataFormat(property="features", type="json")
+#         )
+#     else:
+#         geo_data = alt.InlineData(
+#             values={"type": "FeatureCollection", "features": geo_features},
+#             format=alt.DataFormat(type="json", property="features"),
+#         )
+#     years = state_metrics["study_year"].unique()
+
+#     year_slider = alt.binding_range(
+#         min=int(min(years)), max=int(max(years)), step=1, name="Year: "
+#     )
+#     year_selection = alt.param(
+#         name="selected_year", value=int(min(years)), bind=year_slider
+#     )
+#     year_filter = "datum.properties.study_year == selected_year"
+
+
+
+#     # Childcare cost
+#     childcare_chart = (
+#         alt.Chart(geo_data)
+#         .mark_geoshape(stroke="white", strokeWidth=0.5)
+#         .add_params(year_selection)
+#         .transform_filter(year_filter)
+#         .encode(
+#             shape="geometry:G",
+#             color=alt.Color(
+#                 "properties.mcsa_mean:Q",
+#                 scale=alt.Scale(
+#                     scheme="blues",
+#                     domain=[
+#                         float(state_metrics["mcsa_mean"].min()),
+#                         float(state_metrics["mcsa_mean"].max()),
+#                     ],
+#                 ),
+#                 title=["Average Weekly", "Childcare Cost (Center-Based)"],
+#             ),
+#             tooltip=[
+#                 alt.Tooltip("properties.state_name:N", title="State"),
+#                 alt.Tooltip(
+#                     "properties.mcsa_mean:Q",
+#                     title="Avg Weekly Childcare Cost",
+#                     format=".2f",
+#                 ),
+#                 alt.Tooltip("properties.study_year:Q", title="Year"),
+#             ],
+#         )
+#         .project(type="albersUsa")
+#         .properties(
+#             width=450,
+#             height=280,
+#             title="Average weekly center-based childcare cost (school-age children) by state over a decade",
+#         )
+#     )
+
+
+
+#     # Poverty rate
+#     poverty_chart = (
+#         alt.Chart(geo_data)
+#         .mark_geoshape(stroke="white", strokeWidth=0.5)
+#         .add_params(year_selection)
+#         .transform_filter(year_filter)
+#         .encode(
+#             shape="geometry:G",
+#             color=alt.Color(
+#                 "properties.pr_f_mean:Q",
+#                 scale=alt.Scale(
+#                     scheme="oranges",
+#                     domain=[
+#                         float(state_metrics["pr_f_mean"].min()),
+#                         float(state_metrics["pr_f_mean"].max()),
+#                     ],
+#                 ),
+#                 title="Average poverty rate for families",
+#             ),
+#             tooltip=[
+#                 alt.Tooltip("properties.state_name:N", title="State"),
+#                 alt.Tooltip(
+#                     "properties.pr_f_mean:Q",
+#                     title="Average poverty rate for families",
+#                     format=".2f",
+#                 ),
+#                 alt.Tooltip("properties.study_year:Q", title="Year"),
+#             ],
+#         )
+#         .project(type="albersUsa")
+#         .properties(
+#             width=450,
+#             height=280,
+#             title="Average poverty rate for families by state over a decade",
+#         )
+#     )
+
+
+#     # Female LFPR
+#     labor_chart = (
+#         alt.Chart(geo_data)
+#         .mark_geoshape(stroke="white", strokeWidth=0.5)
+#         .add_params(year_selection)
+#         .transform_filter(year_filter)
+#         .encode(
+#             shape="geometry:G",
+#             color=alt.Color(
+#                 "properties.flfpr_20to64_mean:Q",
+#                 scale=alt.Scale(
+#                     scheme="purples",
+#                     domain=[
+#                         float(state_metrics["flfpr_20to64_mean"].min()),
+#                         float(state_metrics["flfpr_20to64_mean"].max()),
+#                     ],
+#                 ),
+#                 title=["Average female labor", "participation rate (20–64 y/o)"],
+#             ),
+#             tooltip=[
+#                 alt.Tooltip("properties.state_name:N", title="State"),
+#                 alt.Tooltip(
+#                     "properties.flfpr_20to64_mean:Q",
+#                     title="Average female labor participation rate",
+#                     format=".2f",
+#                 ),
+#                 alt.Tooltip("properties.study_year:Q", title="Year"),
+#             ],
+#         )
+#         .project(type="albersUsa")
+#         .properties(
+#             width=500,
+#             height=300,
+#             title="Average female labor participation rate (20–64 y/o) by state over a decade",
+#         )
+#     )
+
+#     bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
+
+#     return (
+#         alt.vconcat(childcare_chart, bottom_row)
+#         .add_params(year_selection)
+#         .resolve_scale(color="independent")
+#         .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S.")
+#     )
+
+
 def make_sliding_choropleth_maps(
-    geo_features:  list,
+    geo_features: list,
     state_metrics: pd.DataFrame,
-    geojson_url:   str | None = None,
+    geojson_url: str | None = None,
 ) -> alt.VConcatChart:
     """
-    Three choropleth maps sharing a year slider for average weekly center-based childcare cost,
-    average female labor force participation rate (ages 20-64), and average poverty rate for families.
+    Three choropleth maps sharing a year slider for:
+    - average weekly center-based childcare cost
+    - average female labor force participation rate (ages 20-64)
+    - average poverty rate for families
     """
+
+    # Geometry source
     if geojson_url is not None:
         geo_data = alt.UrlData(
             url=geojson_url,
@@ -82,28 +241,52 @@ def make_sliding_choropleth_maps(
             values={"type": "FeatureCollection", "features": geo_features},
             format=alt.DataFormat(type="json", property="features"),
         )
-    years = state_metrics["study_year"].unique()
 
+    # Year slider
+    years = sorted(state_metrics["study_year"].unique())
     year_slider = alt.binding_range(
-        min=int(min(years)), max=int(max(years)), step=1, name="Year: "
+        min=int(min(years)),
+        max=int(max(years)),
+        step=1,
+        name="Year: "
     )
-    year_selection = alt.param(
-        name="selected_year", value=int(min(years)), bind=year_slider
+
+    year_param = alt.param(
+        name="selected_year",
+        value=int(min(years)),
+        bind=year_slider
     )
-    year_filter = "datum.properties.study_year == selected_year"
 
 
+    # Map base lookup
 
-    # Childcare cost
-    childcare_chart = (
+    base = (
         alt.Chart(geo_data)
-        .mark_geoshape(stroke="white", strokeWidth=0.5)
-        .add_params(year_selection)
-        .transform_filter(year_filter)
+        .add_params(year_param)
+        .transform_lookup(
+            lookup="properties.state_name",
+            from_=alt.LookupData(
+                state_metrics,
+                key="state_name",
+                fields=[
+                    "study_year",
+                    "mcsa_mean",
+                    "pr_f_mean",
+                    "flfpr_20to64_mean",
+                ],
+            ),
+        )
+        .transform_filter("datum.study_year == selected_year")
+        .project(type="albersUsa")
+    )
+
+    # Childcare cost map
+
+    childcare_chart = (
+        base.mark_geoshape(stroke="white", strokeWidth=0.5)
         .encode(
-            shape="geometry:G",
             color=alt.Color(
-                "properties.mcsa_mean:Q",
+                "mcsa_mean:Q",
                 scale=alt.Scale(
                     scheme="blues",
                     domain=[
@@ -115,34 +298,25 @@ def make_sliding_choropleth_maps(
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip(
-                    "properties.mcsa_mean:Q",
-                    title="Avg Weekly Childcare Cost",
-                    format=".2f",
-                ),
-                alt.Tooltip("properties.study_year:Q", title="Year"),
+                alt.Tooltip("mcsa_mean:Q", title="Avg Weekly Childcare Cost", format=".2f"),
+                alt.Tooltip("study_year:Q", title="Year"),
             ],
         )
-        .project(type="albersUsa")
         .properties(
             width=450,
             height=280,
-            title="Average weekly center-based childcare cost (school-age children) by state over a decade",
+            title="Average weekly center-based childcare cost by state",
         )
     )
 
 
+    # Poverty rate map
 
-    # Poverty rate
     poverty_chart = (
-        alt.Chart(geo_data)
-        .mark_geoshape(stroke="white", strokeWidth=0.5)
-        .add_params(year_selection)
-        .transform_filter(year_filter)
+        base.mark_geoshape(stroke="white", strokeWidth=0.5)
         .encode(
-            shape="geometry:G",
             color=alt.Color(
-                "properties.pr_f_mean:Q",
+                "pr_f_mean:Q",
                 scale=alt.Scale(
                     scheme="oranges",
                     domain=[
@@ -154,33 +328,25 @@ def make_sliding_choropleth_maps(
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip(
-                    "properties.pr_f_mean:Q",
-                    title="Average poverty rate for families",
-                    format=".2f",
-                ),
-                alt.Tooltip("properties.study_year:Q", title="Year"),
+                alt.Tooltip("pr_f_mean:Q", title="Avg poverty rate", format=".2f"),
+                alt.Tooltip("study_year:Q", title="Year"),
             ],
         )
-        .project(type="albersUsa")
         .properties(
             width=450,
             height=280,
-            title="Average poverty rate for families by state over a decade",
+            title="Average poverty rate for families by state",
         )
     )
 
 
-    # Female LFPR
+    # Female LFPR map
+
     labor_chart = (
-        alt.Chart(geo_data)
-        .mark_geoshape(stroke="white", strokeWidth=0.5)
-        .add_params(year_selection)
-        .transform_filter(year_filter)
+        base.mark_geoshape(stroke="white", strokeWidth=0.5)
         .encode(
-            shape="geometry:G",
             color=alt.Color(
-                "properties.flfpr_20to64_mean:Q",
+                "flfpr_20to64_mean:Q",
                 scale=alt.Scale(
                     scheme="purples",
                     domain=[
@@ -188,35 +354,37 @@ def make_sliding_choropleth_maps(
                         float(state_metrics["flfpr_20to64_mean"].max()),
                     ],
                 ),
-                title=["Average female labor", "participation rate (20–64 y/o)"],
+                title=["Average female labor", "participation rate (20–64)"],
             ),
             tooltip=[
                 alt.Tooltip("properties.state_name:N", title="State"),
                 alt.Tooltip(
-                    "properties.flfpr_20to64_mean:Q",
-                    title="Average female labor participation rate",
+                    "flfpr_20to64_mean:Q",
+                    title="Female LFPR",
                     format=".2f",
                 ),
-                alt.Tooltip("properties.study_year:Q", title="Year"),
+                alt.Tooltip("study_year:Q", title="Year"),
             ],
         )
-        .project(type="albersUsa")
         .properties(
             width=500,
             height=300,
-            title="Average female labor participation rate (20–64 y/o) by state over a decade",
+            title="Average female labor participation rate (20–64) by state",
         )
     )
 
-    bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
+    bottom_row = alt.hconcat(
+        labor_chart,
+        poverty_chart
+    ).resolve_scale(color="independent")
 
     return (
         alt.vconcat(childcare_chart, bottom_row)
-        .add_params(year_selection)
         .resolve_scale(color="independent")
-        .properties(title="Childcare cost and socioeconomic metrics (2008-2018) in U.S.")
+        .properties(
+            title="Childcare cost and socioeconomic metrics (2008–2018) in the U.S."
+        )
     )
-
 
 # Urban/rural state county maps in an 8-state panel
 
@@ -390,7 +558,7 @@ def make_heatmap_stacked(county_avg: pd.DataFrame) -> alt.VConcatChart:
 
 # Interactive county-level dashboard for urban vs rural, labor force participation, and poverty rate over time
 
-def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
+def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
     """
     Interactive three-panel dashboard driven by a year slider and a
     Urban/Rural state-group selector showing US county choropleth colored by childcare cost (mcsa),
@@ -401,11 +569,13 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     import json
     alt.data_transformers.disable_max_rows()
 
-    years = sorted(geo_merged["study_year"].unique())
+    geo_features = geo_merged_json["features"]
 
-    # Convert full GeoDataFrame to GeoJSON features for the map layers
-    geo_merged_json = json.loads(geo_merged.to_json())
-    geo_features    = geo_merged_json["features"]
+    years = sorted(set(
+        f["properties"]["study_year"]
+        for f in geo_features
+        if f["properties"].get("study_year") is not None
+    ))
 
     # Deduplicated basemap features (one geometry per county, any year)
     seen = set()
@@ -417,7 +587,7 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
             base_features.append(f)
 
     # Plain DataFrame (no geometry) for scatter and bar charts
-    df_panel = geo_merged.drop(columns=["geometry"]).copy()
+    df_panel = pd.DataFrame([f["properties"] for f in geo_features])
 
     # Shared params
     year_param = alt.param(
@@ -474,8 +644,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     scatter = (
         alt.Chart(df_panel)
         .mark_circle(size=70)
-        .transform_filter("datum.properties.state_group === group_param")
-        .transform_filter("datum.properties.study_year === year_param")
+        .transform_filter(alt.datum.state_group == group_param)
+        .transform_filter(alt.datum.study_year  == year_param)
         .transform_filter(state_select)
         .encode(
             x=alt.X("mcsa:Q",  title="Childcare cost"),
@@ -483,10 +653,10 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
             color=alt.Color("state_name:N"),
             opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.6)),
             tooltip=[
-                alt.Tooltip("state_name:N", title="State"),
+                alt.Tooltip("state_name:N",  title="State"),
                 alt.Tooltip("county_name:N", title="County"),
-                alt.Tooltip("mcsa:Q", title="Childcare cost", format=",.0f"),
-                alt.Tooltip("pr_p:Q", title="Poverty rate",   format=".1f"),
+                alt.Tooltip("mcsa:Q",        title="Childcare cost", format=",.0f"),
+                alt.Tooltip("pr_p:Q",        title="Poverty rate",   format=".1f"),
             ],
         )
         .add_params(county_select)
@@ -496,8 +666,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     # LFPR bars: selected county vs state average
     lfpr_base = (
         alt.Chart(df_panel)
-        .transform_filter("datum.properties.state_group === group_param")
-        .transform_filter("datum.properties.study_year === year_param")
+        .transform_filter(alt.datum.state_group == group_param)
+        .transform_filter(alt.datum.study_year  == year_param)
         .transform_filter(state_select)
     )
 
@@ -507,7 +677,7 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
         .transform_calculate(label='"Selected county"')
         .mark_bar()
         .encode(
-            x=alt.X("label:N", title=""),
+            x=alt.X("label:N",        title=""),
             y=alt.Y("flfpr_20to64:Q", title="Female LFPR (20–64)"),
         )
     )
@@ -525,7 +695,6 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
 
     lfpr_chart = (county_bar + state_bar).properties(width=350, height=200)
 
-    # Add params at the top level so all layers can see them
     return (
         alt.hconcat(map_chart, alt.vconcat(scatter, lfpr_chart))
         .add_params(year_param, group_param)
