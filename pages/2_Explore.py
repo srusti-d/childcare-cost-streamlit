@@ -52,7 +52,7 @@ st.markdown(
 )
 
 cost_chart = charts.make_cost_trend_line(data["cost_trend"])
-st.altair_chart(cost_chart, use_container_width=True)
+st.altair_chart(cost_chart, use_container_width=False)
 
 st.divider()
 
@@ -122,7 +122,7 @@ st.markdown(
 )
 
 heatmaps = charts.make_heatmap_stacked(data["county_avg"])
-st.altair_chart(heatmaps, use_container_width=True)
+st.altair_chart(heatmaps, use_container_width=False)
 
 st.divider()
 

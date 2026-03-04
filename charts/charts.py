@@ -1,7 +1,7 @@
 import altair as alt
 import pandas as pd
 import geopandas as gpd
-
+alt.data_transformers.disable_max_rows()
 from utils.data_io import normalize_features_to_unit_box
 
 def base_theme():
@@ -223,14 +223,7 @@ def make_sliding_choropleth_maps(
     state_metrics: pd.DataFrame,
     geojson_url: str | None = None,
 ) -> alt.VConcatChart:
-    """
-    Three choropleth maps sharing a year slider for:
-    - average weekly center-based childcare cost
-    - average female labor force participation rate (ages 20-64)
-    - average poverty rate for families
-    """
 
-    # Geometry source
     if geojson_url is not None:
         geo_data = alt.UrlData(
             url=geojson_url,
@@ -242,149 +235,85 @@ def make_sliding_choropleth_maps(
             format=alt.DataFormat(type="json", property="features"),
         )
 
-    # Year slider
     years = sorted(state_metrics["study_year"].unique())
-    year_slider = alt.binding_range(
-        min=int(min(years)),
-        max=int(max(years)),
-        step=1,
-        name="Year: "
-    )
 
     year_param = alt.param(
         name="selected_year",
         value=int(min(years)),
-        bind=year_slider
+        bind=alt.binding_range(
+            min=int(min(years)),
+            max=int(max(years)),
+            step=1,
+            name="Year: "
+        ),
     )
 
+    def make_map(metric, scheme, title, width=450, height=280):
 
-    # Map base lookup
-
-    base = (
-        alt.Chart(geo_data)
-        .add_params(year_param)
-        .transform_lookup(
-            lookup="properties.state_name",
-            from_=alt.LookupData(
-                state_metrics,
-                key="state_name",
-                fields=[
-                    "study_year",
-                    "mcsa_mean",
-                    "pr_f_mean",
-                    "flfpr_20to64_mean",
+        return (
+            alt.Chart(geo_data)
+            .mark_geoshape(stroke="white", strokeWidth=0.5)
+            .transform_lookup(
+                lookup="properties.state_name",
+                from_=alt.LookupData(
+                    state_metrics,
+                    key="state_name",
+                    fields=[
+                        "study_year",
+                        "mcsa_mean",
+                        "pr_f_mean",
+                        "flfpr_20to64_mean",
+                    ],
+                ),
+            )
+            .transform_filter("datum.study_year == selected_year")
+            .encode(
+                color=alt.Color(
+                    f"{metric}:Q",
+                    scale=alt.Scale(
+                        scheme=scheme,
+                        domain=[
+                            float(state_metrics[metric].min()),
+                            float(state_metrics[metric].max()),
+                        ],
+                    ),
+                ),
+                tooltip=[
+                    alt.Tooltip("properties.state_name:N", title="State"),
+                    alt.Tooltip(f"{metric}:Q", format=".2f"),
+                    alt.Tooltip("study_year:Q", title="Year"),
                 ],
-            ),
+            )
+            .project(type="albersUsa")
+            .properties(width=width, height=height, title=title)
         )
-        .transform_filter("datum.study_year == selected_year")
-        .project(type="albersUsa")
+
+    childcare_chart = make_map(
+        "mcsa_mean",
+        "blues",
+        "Average weekly childcare cost by state",
     )
 
-    # Childcare cost map
-
-    childcare_chart = (
-        base.mark_geoshape(stroke="white", strokeWidth=0.5)
-        .encode(
-            color=alt.Color(
-                "mcsa_mean:Q",
-                scale=alt.Scale(
-                    scheme="blues",
-                    domain=[
-                        float(state_metrics["mcsa_mean"].min()),
-                        float(state_metrics["mcsa_mean"].max()),
-                    ],
-                ),
-                title=["Average Weekly", "Childcare Cost (Center-Based)"],
-            ),
-            tooltip=[
-                alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip("mcsa_mean:Q", title="Avg Weekly Childcare Cost", format=".2f"),
-                alt.Tooltip("study_year:Q", title="Year"),
-            ],
-        )
-        .properties(
-            width=450,
-            height=280,
-            title="Average weekly center-based childcare cost by state",
-        )
+    poverty_chart = make_map(
+        "pr_f_mean",
+        "oranges",
+        "Average poverty rate by state",
     )
 
-
-    # Poverty rate map
-
-    poverty_chart = (
-        base.mark_geoshape(stroke="white", strokeWidth=0.5)
-        .encode(
-            color=alt.Color(
-                "pr_f_mean:Q",
-                scale=alt.Scale(
-                    scheme="oranges",
-                    domain=[
-                        float(state_metrics["pr_f_mean"].min()),
-                        float(state_metrics["pr_f_mean"].max()),
-                    ],
-                ),
-                title="Average poverty rate for families",
-            ),
-            tooltip=[
-                alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip("pr_f_mean:Q", title="Avg poverty rate", format=".2f"),
-                alt.Tooltip("study_year:Q", title="Year"),
-            ],
-        )
-        .properties(
-            width=450,
-            height=280,
-            title="Average poverty rate for families by state",
-        )
+    labor_chart = make_map(
+        "flfpr_20to64_mean",
+        "purples",
+        "Average female LFPR (20–64)",
+        width=500,
+        height=300,
     )
 
+    bottom_row = alt.hconcat(labor_chart, poverty_chart).resolve_scale(color="independent")
 
-    # Female LFPR map
+    final_chart = alt.vconcat(childcare_chart, bottom_row).resolve_scale(color="independent")
 
-    labor_chart = (
-        base.mark_geoshape(stroke="white", strokeWidth=0.5)
-        .encode(
-            color=alt.Color(
-                "flfpr_20to64_mean:Q",
-                scale=alt.Scale(
-                    scheme="purples",
-                    domain=[
-                        float(state_metrics["flfpr_20to64_mean"].min()),
-                        float(state_metrics["flfpr_20to64_mean"].max()),
-                    ],
-                ),
-                title=["Average female labor", "participation rate (20–64)"],
-            ),
-            tooltip=[
-                alt.Tooltip("properties.state_name:N", title="State"),
-                alt.Tooltip(
-                    "flfpr_20to64_mean:Q",
-                    title="Female LFPR",
-                    format=".2f",
-                ),
-                alt.Tooltip("study_year:Q", title="Year"),
-            ],
-        )
-        .properties(
-            width=500,
-            height=300,
-            title="Average female labor participation rate (20–64) by state",
-        )
-    )
-
-    bottom_row = alt.hconcat(
-        labor_chart,
-        poverty_chart
-    ).resolve_scale(color="independent")
-
-    return (
-        alt.vconcat(childcare_chart, bottom_row)
-        .resolve_scale(color="independent")
-        .properties(
-            title="Childcare cost and socioeconomic metrics (2008–2018) in the U.S."
-        )
-    )
+    # Attach param at top level for rendering
+    return final_chart.add_params(year_param)
 
 # Urban/rural state county maps in an 8-state panel
 
