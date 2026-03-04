@@ -1,7 +1,6 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 import streamlit as st
+from utils import data_io as io
+import charts
 from PIL import Image
 
 st.set_page_config(page_title="Project Overview & Central Narrative:", layout="wide")

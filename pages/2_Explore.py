@@ -1,7 +1,5 @@
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
-import io_ as io
+from utils import data_io as io
 import charts
 
 # Page config
