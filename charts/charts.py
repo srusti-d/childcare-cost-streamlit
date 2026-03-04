@@ -168,9 +168,9 @@ def make_sliding_choropleth_maps(
                 title=["Average female labor", "participation rate (20-64 y/o)"],
             ),
             tooltip=[
-                alt.Tooltip("properties.state_name:N",        title="State"),
+                alt.Tooltip("properties.state_name:N", title="State"),
                 alt.Tooltip("properties.flfpr_20to64_mean:Q", title="Average female labor participation rate", format=".2f"),
-                alt.Tooltip("properties.study_year:Q",        title="Year"),
+                alt.Tooltip("properties.study_year:Q", title="Year"),
             ],
         )
         .project(type="albersUsa")
@@ -298,9 +298,9 @@ def make_heatmap_poverty(county_avg: pd.DataFrame) -> alt.LayerChart:
         .transform_regression("Poverty Rate (%)", "Average Childcare Cost", groupby=["County Type"])
         .mark_line(size=3)
         .encode(
-            x=alt.X("Poverty Rate (%):Q",       title="Poverty Rate (%)"),
+            x=alt.X("Poverty Rate (%):Q", title="Poverty Rate (%)"),
             y=alt.Y("Average Childcare Cost:Q", title="Average Childcare Cost"),
-            color=alt.Color("County Type:N",    title="County Type"),
+            color=alt.Color("County Type:N", title="County Type"),
         )
     )
 
@@ -333,9 +333,9 @@ def make_heatmap_lfpr(county_avg: pd.DataFrame) -> alt.LayerChart:
         .transform_regression("Female LFPR (%)", "Average Childcare Cost", groupby=["County Type"])
         .mark_line(size=3)
         .encode(
-            x=alt.X("Female LFPR (%):Q",        title="Female LFPR (%)"),
+            x=alt.X("Female LFPR (%):Q", title="Female LFPR (%)"),
             y=alt.Y("Average Childcare Cost:Q", title="Average Childcare Cost"),
-            color=alt.Color("County Type:N",    title="County Type"),
+            color=alt.Color("County Type:N", title="County Type"),
         )
     )
 
@@ -455,10 +455,10 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
             color=alt.Color("state_name:N"),
             opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.6)),
             tooltip=[
-                alt.Tooltip("state_name:N",  title="State"),
+                alt.Tooltip("state_name:N", title="State"),
                 alt.Tooltip("county_name:N", title="County"),
-                alt.Tooltip("mcsa:Q",        title="Childcare cost", format=",.0f"),
-                alt.Tooltip("pr_p:Q",        title="Poverty rate",   format=".1f"),
+                alt.Tooltip("mcsa:Q", title="Childcare cost", format=",.0f"),
+                alt.Tooltip("pr_p:Q", title="Poverty rate",   format=".1f"),
             ],
         )
         .add_params(county_select)
@@ -479,7 +479,7 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
         .transform_calculate(label='"Selected county"')
         .mark_bar()
         .encode(
-            x=alt.X("label:N",        title=""),
+            x=alt.X("label:N", title=""),
             y=alt.Y("flfpr_20to64:Q", title="Female LFPR (20–64)"),
         )
     )
@@ -490,8 +490,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
         .transform_calculate(label='"State average"')
         .mark_bar(color="orange")
         .encode(
-            x=alt.X("label:N",     title=""),
-            y=alt.Y("state_avg:Q", title="Female LFPR (20–64)"),
+            x=alt.X("label:N", title=""),
+            y=alt.Y("state_avg:Q", title="Female LFPR (20-64)"),
         )
     )
 

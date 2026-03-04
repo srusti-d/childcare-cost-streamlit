@@ -18,7 +18,7 @@ def _fix_fips_digits(val) -> str:
 
 
 def _iter_coords(coords):
-    """Yield every (x, y) pair from nested GeoJSON coordinates."""
+    """Get every (x, y) pair from nested GeoJSON coordinates."""
     if not coords:
         return
     if isinstance(coords[0], (int, float)) and len(coords) == 2:
@@ -74,8 +74,8 @@ def normalize_features_to_unit_box(features: list, pad: float = 0.03) -> list:
 def load_raw_data(
     childcare_path: str = "./data/childcare_costs.csv",
     counties_path:  str = "./data/counties.csv",
-    rucc_path:      str = "./data/Ruralurbancontinuumcodes2023.csv",
-    geojson_path:   str = "./data/geojson-counties-fips.json",
+    rucc_path: str = "./data/Ruralurbancontinuumcodes2023.csv",
+    geojson_path: str = "./data/geojson-counties-fips.json",
 ) -> dict:
     """
     Load every raw data source and return them in a dict keyed by name.
@@ -114,19 +114,7 @@ def load_raw_data(
 
 def preprocess_base(raw: dict) -> dict:
     """
-    Normalise FIPS codes, derive state_id, and produce the master merged table.
-
-    Merges child_data with county_data on `county_fips_code` (exact county
-    match) so every row carries both metrics and metadata (state_name, etc.)
-    without row explosion.
-
-    Returns
-    -------
-    dict with keys:
-        child_data   : pd.DataFrame  (FIPS-normalised)
-        county_data  : pd.DataFrame  (FIPS-normalised)
-        data_merged  : pd.DataFrame  (child LEFT-JOIN county on county_fips_code)
-        US_map_df    : pd.DataFrame  (+ state_name column)
+    Normalise FIPS codes, get state_id.
     """
     child_data  = raw["child_data"].copy()
     county_data = raw["county_data"].copy()
@@ -150,7 +138,7 @@ def preprocess_base(raw: dict) -> dict:
             data_merged.pop("state_id_county")
         )
 
-    # Propagate state_name into the map DataFrame
+    # Get state_name into the map DataFrame
     state_name_map = (
         data_merged[["state_id", "state_name"]]
         .drop_duplicates()
@@ -168,13 +156,6 @@ def preprocess_base(raw: dict) -> dict:
 
 def build_state_metrics(data_merged: pd.DataFrame) -> pd.DataFrame:
     """
-    Aggregate county rows to state × year means for the three choropleth metrics:
-        mcsa_mean -->  average weekly center-based childcare cost (school-age)
-        pr_f_mean  --> average poverty rate for families
-        flfpr_20to64_mean --> average female labour-force participation rate
-
-    state_name is joined back so tooltips can display it.
-
     Returns dataframe with state_id, study_year, mcsa_mean, pr_f_mean, flfpr_20to64_mean, state_name.
     """
     state_metrics = (
@@ -200,11 +181,7 @@ def build_state_metrics(data_merged: pd.DataFrame) -> pd.DataFrame:
 def build_geo_features(US_map_df: pd.DataFrame, state_metrics: pd.DataFrame) -> list:
     """
     Dissolve county geometries to state level, merge with state_metrics, and
-    return a flat list of GeoJSON features (one per state × year).
-
-    Each feature's `properties` dict includes:
-        state_id, state_name, study_year,
-        mcsa_mean, pr_f_mean, flfpr_20to64_mean
+    return a flat list of GeoJSON features. mcsa_mean, pr_f_mean, flfpr_20to64_mean.
     """
     gdf = gpd.GeoDataFrame(
         US_map_df[["county_name", "county_fips_code", "county_id", "state_id"]],
@@ -242,11 +219,6 @@ def build_rucc_panel(data_merged: pd.DataFrame, rucc: pd.DataFrame) -> pd.DataFr
     """
     Attach Rural-Urban Continuum Codes (2023) to data_merged, derive a binary
     urbanicity_rucc label (Urban / Rural), and drop unmatched rows.
-
-    Returns
-    -------
-    pd.DataFrame – data_merged rows with urbanicity_rucc not null,
-                   plus columns RUCC_2023 and urbanicity_rucc.
     """
     rucc_2023 = (
         rucc.loc[rucc["Attribute"] == "RUCC_2023", ["FIPS", "Value"]]
@@ -273,8 +245,6 @@ def build_sample_county_avg(
     """
     County-level and state-level averages of mcsa, pr_p, flfpr_20to64
     for the sample states (averaged across all study years).
-
-    Returns county-level average and state-level average.
     """
     if sample_states is None:
         sample_states = [
@@ -311,7 +281,7 @@ def build_geo_merged(
     geo_counties_raw: dict,
 ) -> gpd.GeoDataFrame:
     """
-    Build a county-level GeoDataFrame that pairs geometry with per-year child
+    Build a county-level GeoDataFrame for per-year child
     data metrics and urbanicity labels.  
     'state_group' is Urban or Rural based on each state's majority county type.
     """
@@ -366,15 +336,11 @@ def build_cost_trend(data_merged: pd.DataFrame) -> pd.DataFrame:
     return data_merged.groupby("study_year")["mcsa"].mean().reset_index()
 
 
-# ---------------------------------------------------------------------------
-# Convenience one-shot loader
-# ---------------------------------------------------------------------------
-
 def load_and_preprocess_all(
-    childcare_path: str        = "./data/childcare_costs.csv",
-    counties_path:  str        = "./data/counties.csv",
-    rucc_path:      str        = "./data/Ruralurbancontinuumcodes2023.csv",
-    geojson_path:   str        = "./data/geojson-counties-fips.json",
+    childcare_path: str  = "./data/childcare_costs.csv",
+    counties_path:  str  = "./data/counties.csv",
+    rucc_path:      str  = "./data/Ruralurbancontinuumcodes2023.csv",
+    geojson_path:   str  = "./data/geojson-counties-fips.json",
     sample_states:  list | None = None,
 ) -> dict:
     """
