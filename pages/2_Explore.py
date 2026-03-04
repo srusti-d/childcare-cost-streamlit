@@ -2,6 +2,8 @@ import streamlit as st
 from utils import data_io as io
 import charts
 
+GEOJSON_URL = "https://raw.githubusercontent.com/srusti-d/childcare-cost-streamlit/main/data/geojson-counties-fips.json"
+
 # Page config
 st.set_page_config(page_title="Explore Childcare Cost Analysis", layout="wide")
 
@@ -64,15 +66,19 @@ st.markdown(
     """
 )
 
-choropleth = charts.make_sliding_choropleth_maps(data["geo_features"], data["state_metrics"])
+choropleth = charts.make_sliding_choropleth_maps(
+    data["geo_features"],
+    data["state_metrics"],
+    geojson_url=GEOJSON_URL,
+)
 st.altair_chart(choropleth, use_container_width=False)
 
 st.divider()
 
 
-# Section 3 — Urban vs rural county classification maps
+# Urban vs rural county classification maps
 
-st.header("3 · Urban vs Rural Counties — 8-State Sample")
+st.header("Urban vs Rural Counties — 8 State Sample")
 st.markdown(
     """
     Counties are classified as **Urban** (USDA RUCC code ≤ 3) or **Rural**
@@ -89,6 +95,7 @@ urb_rural = charts.make_urban_rural_state_maps(
     data["county_avg"],
     data["geo_counties_raw"],
     data["sample_states"],
+    geojson_url=GEOJSON_URL,
 )
 st.altair_chart(urb_rural, use_container_width=False)
 

@@ -22,7 +22,12 @@ def make_cost_trend_line(cost_trend: pd.DataFrame) -> alt.LayerChart:
     band = (
         alt.Chart(recession)
         .mark_rect(opacity=0.15, color="gray")
-        .encode(x=alt.X("x1:Q", title=""), x2="x2:Q")
+        .encode(
+            x=alt.X("x1:Q", title=""),
+            x2="x2:Q",
+            y=alt.value(0),
+            y2=alt.value(380),
+        )
     )
 
     recession_label = pd.DataFrame({
@@ -89,13 +94,21 @@ def _prep_heatmap_df(county_avg: pd.DataFrame) -> pd.DataFrame:
 def make_sliding_choropleth_maps(
     geo_features:  list,
     state_metrics: pd.DataFrame,
+    geojson_url:   str | None = None,
 ) -> alt.VConcatChart:
     """
     Three choropleth maps sharing a year slider for average weekly center-based childcare cost,
     average female labor force participation rate (ages 20-64), and average poverty rate for families.
     """
-    geo_data = alt.Data(values=geo_features)
-    years    = state_metrics["study_year"].unique()
+    if geojson_url is not None:
+        geo_data = alt.UrlData(
+            url=geojson_url,
+            format=alt.DataFormat(property="features", type="json")
+        )
+    else:
+        geo_data = alt.Data(values=geo_features)
+
+    years = state_metrics["study_year"].unique()
 
     year_slider = alt.binding_range(
         min=int(min(years)), max=int(max(years)), step=1, name="Year: "
@@ -211,6 +224,7 @@ def make_urban_rural_state_maps(
     county_avg:       pd.DataFrame,
     geo_counties_raw: dict,
     sample_states:    list | None = None,
+    geojson_url:      str | None = None,
 ) -> alt.VConcatChart:
     """
     Panel of county maps coloured by urban/rural classification.
@@ -229,11 +243,18 @@ def make_urban_rural_state_maps(
         state_df = county_avg_8[county_avg_8["state_name"] == st].copy()
         fips_set = set(state_df["county_fips_code"].tolist())
 
-        feats      = [ft for ft in geo_counties_raw["features"] if ft["properties"]["fips5"] in fips_set]
-        feats_norm = normalize_features_to_unit_box(feats, pad=0.02)
+        if geojson_url is not None:
+            geo_source = alt.UrlData(
+                url=geojson_url,
+                format=alt.DataFormat(property="features", type="json")
+            )
+        else:
+            feats      = [ft for ft in geo_counties_raw["features"] if ft["properties"]["fips5"] in fips_set]
+            feats_norm = normalize_features_to_unit_box(feats, pad=0.02)
+            geo_source = alt.Data(values=feats_norm)
 
         ch = (
-            alt.Chart(alt.Data(values=feats_norm))
+            alt.Chart(geo_source)
             .mark_geoshape(stroke="white", strokeWidth=0.4)
             .project(type="identity", reflectY=True)
             .transform_lookup(
@@ -247,7 +268,10 @@ def make_urban_rural_state_maps(
             .encode(
                 color=alt.Color(
                     "urbanicity_rucc:N",
-                    scale=alt.Scale(domain=["Urban", "Rural"]),
+                    scale=alt.Scale(
+                        domain=["Urban", "Rural"],
+                        range=["#4e79a7", "#f28e2b"]
+                    ),
                     legend=alt.Legend(title="County type") if i == 0 else None,
                     title="County type",
                 ),
@@ -255,9 +279,9 @@ def make_urban_rural_state_maps(
                     alt.Tooltip("state_name:N",      title="State"),
                     alt.Tooltip("properties.NAME:N", title="County"),
                     alt.Tooltip("urbanicity_rucc:N", title="Urban/Rural"),
-                    alt.Tooltip(f"{COST}:Q", title="Avg childcare cost", format=",.2f"),
-                    alt.Tooltip(f"{WLF}:Q", title="Female Labor Force Participation Rate", format=",.2f"),
-                    alt.Tooltip(f"{POV}:Q", title="Poverty rate", format=",.2f"),
+                    alt.Tooltip(f"{COST}:Q", title="Avg childcare cost",               format=",.2f"),
+                    alt.Tooltip(f"{WLF}:Q",  title="Female Labor Force Participation", format=",.2f"),
+                    alt.Tooltip(f"{POV}:Q",  title="Poverty rate",                     format=",.2f"),
                 ],
             )
             .properties(
