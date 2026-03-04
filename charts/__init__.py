@@ -416,8 +416,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     colored_counties = (
         alt.Chart(alt.Data(values=geo_features))
         .mark_geoshape(stroke="#333333", strokeWidth=0.4)
-        .transform_filter(alt.expr.datum.properties.state_group == group_param)
-        .transform_filter(alt.expr.datum.properties.study_year == year_param)
+        .transform_filter("datum.properties.state_group === group_param")
+        .transform_filter("datum.properties.study_year === year_param")
         .encode(
             color=alt.Color(
                 "properties.mcsa:Q",
@@ -446,8 +446,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     scatter = (
         alt.Chart(df_panel)
         .mark_circle(size=70)
-        .transform_filter(alt.expr.datum.properties.state_group == group_param)
-        .transform_filter(alt.expr.datum.properties.study_year == year_param)
+        .transform_filter("datum.properties.state_group === group_param")
+        .transform_filter("datum.properties.study_year === year_param")
         .transform_filter(state_select)
         .encode(
             x=alt.X("mcsa:Q",  title="Childcare cost"),
@@ -468,8 +468,8 @@ def make_county_dashboard(geo_merged: gpd.GeoDataFrame) -> alt.HConcatChart:
     # LFPR bars: selected county vs state average
     lfpr_base = (
         alt.Chart(df_panel)
-        .transform_filter(alt.expr.datum.properties.state_group == group_param)
-        .transform_filter(alt.expr.datum.properties.study_year == year_param)
+        .transform_filter("datum.properties.state_group === group_param")
+        .transform_filter("datum.properties.study_year === year_param")
         .transform_filter(state_select)
     )
 
