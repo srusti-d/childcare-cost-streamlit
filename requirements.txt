@@ -1,4 +1,6 @@
 streamlit
-altair
 pandas
-vega_datasets
+altair
+geopandas
+shapely
+pyarrow
