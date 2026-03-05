@@ -88,11 +88,11 @@ st.markdown(
     """
     Counties are classified as **Urban** (USDA RUCC code ≤ 3) or **Rural**
     (code ≥ 4) using the 2023 Rural-Urban Continuum Codes.  The sample covers
-    four predominantly urban states (California, New York, New Jersey,
-    Massachusetts) and four predominantly rural states (North Dakota, South
-    Dakota, Vermont, Wyoming) to provide a balanced geographic comparison.
+    four predominantly urban states (Massachusetts, California, Arizona, Delaware) 
+    and four predominantly rural states (North Dakota, Kansas, Oklahoma, Vermont) 
+    to provide a balanced geographic comparison.
     You can hover over any county to see its average childcare cost, poverty rate, and
-    female LFPR.
+    female labor force participation rate.
     """
 )
 
@@ -129,15 +129,13 @@ st.divider()
 st.header("Interactive County-Level Dashboard")
 st.markdown(
     """
-    This dashboard lets you drill from the national picture down to individual
-    counties.
+    This dashboard lets you zoom-in on the national picture about childcare cost and associated socioeconomic metrics, down to individual states and counties.
 
-    1. Choose a **year** with the slider and a **state group** (Urban- or
-       Rural-majority states) from the dropdown.
-    2. **Click a state** on the map to filter the scatter plot (showing childcare cost vs poverty rate) and bar chart
-       to that state's counties.
-    3. **Click a county** in the scatter plot to compare its female labor force participation rate
-       against its state average in the bar chart.
+    1. Slide through or choose a **year** with the slider and a **state** from the dropdown. 
+    These states are the predominantly rural/urban ones we focused on earlier.
+    2. Hover over each county in the state map to see county-specific details on childcare cost, poverty rate, and female labor force participation rate.
+    3. Each point on the scatter plot for the state corresponds to a county in the displayed state. **Click a county** in the scatter plot 
+    to compare its female labor force participation rate against its state average in the bar chart.
     """
 )
 

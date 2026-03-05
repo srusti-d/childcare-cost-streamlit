@@ -247,10 +247,6 @@ def build_sample_county_avg(
     for the sample states (averaged across all study years).
     """
     if sample_states is None:
-        # sample_states = [
-        #     "California", "New York", "New Jersey", "Massachusetts",
-        #     "North Dakota", "South Dakota", "Vermont", "Wyoming",
-        # ]
         sample_states = [
             "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
             "Massachusetts", "California", "Arizona", "Delaware" #urban
@@ -279,17 +275,17 @@ def build_sample_county_avg(
 
     return county_avg, state_avg
 
-
 def build_geo_merged(
     df_rucc_valid: pd.DataFrame,
     geo_counties_raw: dict,
 ) -> gpd.GeoDataFrame:
     """
     Build a county-level GeoDataFrame for per-year child
-    data metrics and urbanicity labels.  
-    'state_group' is Urban or Rural based on each state's majority county type.
+    data metrics and urbanicity labels.
     """
-    # Build county GeoDataFrame from raw GeoJSON
+    rural_states = ["North Dakota", "Kansas", "Oklahoma", "Vermont"]
+    urban_states = ["Massachusetts", "California", "Arizona", "Delaware"]
+
     feats = geo_counties_raw["features"]
     gdf_counties = gpd.GeoDataFrame(
         {
@@ -301,31 +297,23 @@ def build_geo_merged(
     )
     gdf_counties["county_fips_code"] = gdf_counties["county_fips_code"].astype(str).str.zfill(5)
 
-    # Get majority vote state_group per state
-    state_urbanicity = (
-        df_rucc_valid.groupby("state_name")["urbanicity_rucc"]
-        .value_counts(normalize=True)
-        .unstack(fill_value=0)
-    )
-    state_urbanicity["state_group"] = state_urbanicity.apply(
-        lambda row: "Urban" if row.get("Urban", 0) >= row.get("Rural", 0) else "Rural",
-        axis=1,
-    )
-    state_group_map = state_urbanicity[["state_group"]].reset_index()
+    def assign_group(state):
+        if state in rural_states:
+            return "Rural"
+        elif state in urban_states:
+            return "Urban"
+        else:
+            return None
 
-    # Select yearly panel columns and attach state_group
     keep_cols = [
         "county_fips_code", "state_name", "state_id",
         "study_year", "mcsa", "pr_p", "flfpr_20to64", "urbanicity_rucc",
     ]
-    child_small = (
-        df_rucc_valid[keep_cols]
-        .copy()
-        .assign(county_fips_code=lambda d: d["county_fips_code"].astype(str).str.zfill(5))
-        .merge(state_group_map, on="state_name", how="left")
-    )
+    child_small = df_rucc_valid[keep_cols].copy()
+    child_small["county_fips_code"] = child_small["county_fips_code"].astype(str).str.zfill(5)
+    child_small["state_group"] = child_small["state_name"].apply(assign_group)
+    child_small = child_small[child_small["state_group"].notna()]
 
-    # Inner join: keep only counties present in both GeoJSON and child data
     return gdf_counties.merge(child_small, on="county_fips_code", how="inner")
 
 
@@ -352,8 +340,8 @@ def load_and_preprocess_all(
     """
     if sample_states is None:
         sample_states = [
-            "California", "New York", "New Jersey", "Massachusetts",
-            "North Dakota", "South Dakota", "Vermont", "Wyoming",
+            "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
+            "Massachusetts", "California", "Arizona", "Delaware", # urban
         ]
 
     raw  = load_raw_data(childcare_path, counties_path, rucc_path, geojson_path)

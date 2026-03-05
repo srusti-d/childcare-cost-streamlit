@@ -200,7 +200,7 @@ def make_sliding_choropleth_maps(
         .properties(
             width=500,
             height=300,
-            title="Average female labor participation rate (20–64 y/o) by state over a decade",
+            title="Average female labor participation rate (20-64 y/o) by state over a decade",
         )
     )
 
@@ -227,8 +227,8 @@ def make_urban_rural_state_maps(
     """
     if sample_states is None:
         sample_states = [
-            "California", "New York", "New Jersey", "Massachusetts",
-            "North Dakota", "South Dakota", "Vermont", "Wyoming",
+            "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
+            "Massachusetts", "California", "Arizona", "Delaware", # urban
         ]
 
     COST, WLF, POV = "mcsa", "flfpr_20to64", "pr_p"
@@ -272,12 +272,12 @@ def make_urban_rural_state_maps(
                     title="County type",
                 ),
                 tooltip=[
-                    alt.Tooltip("state_name:N",      title="State"),
+                    alt.Tooltip("state_name:N", title="State"),
                     alt.Tooltip("properties.NAME:N", title="County"),
                     alt.Tooltip("urbanicity_rucc:N", title="Urban/Rural"),
-                    alt.Tooltip(f"{COST}:Q", title="Avg childcare cost",               format=",.2f"),
-                    alt.Tooltip(f"{WLF}:Q",  title="Female Labor Force Participation", format=",.2f"),
-                    alt.Tooltip(f"{POV}:Q",  title="Poverty rate",                     format=",.2f"),
+                    alt.Tooltip(f"{COST}:Q", title="Avg childcare cost", format=",.2f"),
+                    alt.Tooltip(f"{WLF}:Q",  title="Female Labor Force Particip. Rate (FLFPR)", format=",.2f"),
+                    alt.Tooltip(f"{POV}:Q",  title="Poverty rate", format=",.2f"),
                 ],
             )
             .properties(
@@ -294,7 +294,7 @@ def make_urban_rural_state_maps(
         .configure_view(stroke=None)
         .properties(title={
             "text": "Urban vs Rural County Comparison",
-            "subtitle": "8-state sample with full data coverage",
+            "subtitle": "8 state sample with full data coverage",
         })
     )
 
@@ -311,8 +311,8 @@ def make_heatmap_poverty(county_avg: pd.DataFrame) -> alt.LayerChart:
         alt.Chart(df).mark_rect()
         .encode(
             x=alt.X("Poverty Rate (%):Q", bin=alt.Bin(maxbins=30), title="Poverty Rate (%)"),
-            y=alt.Y("Average Childcare Cost:Q", bin=alt.Bin(maxbins=30), title="Average Childcare Cost"),
-            color=alt.Color("count():Q", scale=alt.Scale(scheme="greys"), title="# of Counties"),
+            y=alt.Y("Average Childcare Cost:Q", bin=alt.Bin(maxbins=30), title="Average Weekly Childcare Cost"),
+            color=alt.Color("count():Q", scale=alt.Scale(scheme="greens"), title="# of Counties"),
             tooltip=[alt.Tooltip("count():Q", title="# of Counties")],
         )
     )
@@ -323,7 +323,7 @@ def make_heatmap_poverty(county_avg: pd.DataFrame) -> alt.LayerChart:
         .mark_line(size=3)
         .encode(
             x=alt.X("Poverty Rate (%):Q", title="Poverty Rate (%)"),
-            y=alt.Y("Average Childcare Cost:Q", title="Average Childcare Cost"),
+            y=alt.Y("Average Childcare Cost:Q", title="Average Weekly Childcare Cost"),
             color=alt.Color("County Type:N", scale=alt.Scale(domain=["Urban", "Rural"], range=["#4e79a7", "#f28e2b"]), title="County Type"),
         )
     )
@@ -346,8 +346,8 @@ def make_heatmap_lfpr(county_avg: pd.DataFrame) -> alt.LayerChart:
         alt.Chart(df).mark_rect()
         .encode(
             x=alt.X("Female LFPR (%):Q", bin=alt.Bin(maxbins=30), title="Female Labor Force Participation Rate (%)"),
-            y=alt.Y("Average Childcare Cost:Q", bin=alt.Bin(maxbins=30), title="Average Childcare Cost"),
-            color=alt.Color("count():Q", title="# of Counties"),
+            y=alt.Y("Average Childcare Cost:Q", bin=alt.Bin(maxbins=30), title="Average Weekly Childcare Cost"),
+            color=alt.Color("count():Q", scale=alt.Scale(scheme="purples"), title="# of Counties"),
             tooltip=[alt.Tooltip("count():Q", title="# of Counties")],
         )
     )
@@ -358,8 +358,8 @@ def make_heatmap_lfpr(county_avg: pd.DataFrame) -> alt.LayerChart:
         .mark_line(size=3)
         .encode(
             x=alt.X("Female LFPR (%):Q", title="Female Labor Force Participation Rate (%)"),
-            y=alt.Y("Average Childcare Cost:Q", title="Average Childcare Cost"),
-            color=alt.Color("County Type:N", title="County Type"),
+            y=alt.Y("Average Childcare Cost:Q", title="Average Weekly Childcare Cost"),
+            color=alt.Color("County Type:N", scale=alt.Scale(domain=["Urban", "Rural"], range=["#4e79a7", "#f28e2b"]), title="County Type"),
         )
     )
 
@@ -376,7 +376,7 @@ def make_heatmap_stacked(county_avg: pd.DataFrame) -> alt.VConcatChart:
     """
     return alt.vconcat(
         make_heatmap_poverty(county_avg).properties(
-            title="Childcare Cost vs Poverty "
+            title="Childcare Cost vs Poverty Rate"
         ),
         make_heatmap_lfpr(county_avg).properties(
             title="Childcare Cost vs Female Labor Force Participation Rate"
@@ -389,12 +389,10 @@ def make_heatmap_stacked(county_avg: pd.DataFrame) -> alt.VConcatChart:
 def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
     """
     Interactive three-panel dashboard driven by a year slider and a
-    Urban/Rural state-group selector showing US county choropleth colored by childcare cost (mcsa),
-    can click a state to highlight it in the right panels, a scatter plot (childcare cost vs poverty rate)
-    coloured by state, filtered to the clicked state and bar chart
-    comparing selected-county vs state-average female LFPR, filtered to the clicked state.
+    state dropdown. Shows a county choropleth for the selected state
+    coloured by childcare cost, a scatter plot of cost vs poverty rate,
+    and a bar chart comparing selected county vs state average female LFPR.
     """
-    import json
     alt.data_transformers.disable_max_rows()
 
     geo_features = geo_merged_json["features"]
@@ -405,16 +403,13 @@ def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
         if f["properties"].get("study_year") is not None
     ))
 
-    # Deduplicated basemap features (one geometry per county, any year)
-    seen = set()
-    base_features = []
-    for f in geo_features:
-        fips = f["properties"].get("county_fips_code")
-        if fips not in seen:
-            seen.add(fips)
-            base_features.append(f)
+    state_names = sorted(set(
+        f["properties"]["state_name"]
+        for f in geo_features
+        if f["properties"].get("state_name") is not None
+    ))
 
-    # Plain DataFrame (no geometry) for scatter and bar charts
+    # Plain DataFrame (no geometry) for all three panels
     df_panel = pd.DataFrame([f["properties"] for f in geo_features])
 
     # Shared params
@@ -423,68 +418,53 @@ def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
         value=min(years),
         bind=alt.binding_range(min=min(years), max=max(years), step=1, name="Year: "),
     )
-    group_param = alt.param(
-        name="group_param",
-        value="Rural",
-        bind=alt.binding_select(options=["Rural", "Urban"], name="State group: "),
+    state_param = alt.param(
+        name="state_param",
+        value=state_names[0],
+        bind=alt.binding_select(options=state_names, name="State: "),
     )
-    state_select  = alt.selection_point(fields=["properties.state_name"])
-    county_select = alt.selection_point(fields=["properties.county_fips_code"])
+    county_select = alt.selection_point(fields=["county_fips_code"])
 
-    # Grey basemap
-    us_basemap = (
-        alt.Chart(alt.Data(values=base_features))
-        .mark_geoshape(fill="#E0E0E0", stroke="white", strokeWidth=0.3)
-        .project(type="albersUsa")
-    )
-
-    # Colored counties filtered by group + year
-    colored_counties = (
+    # County choropleth for selected state
+    state_map = (
         alt.Chart(alt.Data(values=geo_features))
         .mark_geoshape(stroke="#333333", strokeWidth=0.4)
-        .transform_filter("datum.properties.state_group === group_param")
+        .transform_filter("datum.properties.state_name === state_param")
         .transform_filter("datum.properties.study_year === year_param")
         .encode(
             color=alt.Color(
                 "properties.mcsa:Q",
                 title="Childcare cost",
-                scale=alt.Scale(scheme="viridis", reverse=True),
+                scale=alt.Scale(scheme="blues", reverse=True),
             ),
-            opacity=alt.condition(state_select, alt.value(1.0), alt.value(0.8)),
+            opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.5)),
             tooltip=[
-                alt.Tooltip("properties.state_name:N",   title="State"),
-                alt.Tooltip("properties.county_name:N",  title="County"),
-                alt.Tooltip("properties.mcsa:Q",         title="Childcare cost", format=",.0f"),
-                alt.Tooltip("properties.pr_p:Q",         title="Poverty rate",   format=".1f"),
-                alt.Tooltip("properties.flfpr_20to64:Q", title="Female LFPR",    format=".1f"),
+                alt.Tooltip("properties.state_name:N", title="State"),
+                alt.Tooltip("properties.county_name:N", title="County"),
+                alt.Tooltip("properties.mcsa:Q", title="Avg weekly childcare cost", format=",.0f"),
+                alt.Tooltip("properties.pr_p:Q", title="Poverty rate", format=".1f"),
+                alt.Tooltip("properties.flfpr_20to64:Q", title="Female Labor Force Participation Rate", format=".1f"),
             ],
         )
-        .add_params(state_select)
         .project(type="albersUsa")
+        .properties(width=400, height=500)
     )
 
-    map_chart = (
-        alt.layer(us_basemap, colored_counties)
-        .properties(width=750, height=500)
-    )
-
-    # Scatter: cost vs poverty, filtered to clicked state
+    # Scatter: cost vs poverty for selected state + year
     scatter = (
         alt.Chart(df_panel)
         .mark_circle(size=70)
-        .transform_filter(alt.datum.state_group == group_param)
-        .transform_filter(alt.datum.study_year  == year_param)
-        .transform_filter(state_select)
+        .transform_filter(alt.datum.state_name == state_param)
+        .transform_filter(alt.datum.study_year == year_param)
         .encode(
-            x=alt.X("mcsa:Q",  title="Childcare cost"),
-            y=alt.Y("pr_p:Q",  title="Poverty rate"),
-            color=alt.Color("state_name:N"),
+            x=alt.X("mcsa:Q", title="Avg weekly childcare cost"),
+            y=alt.Y("pr_p:Q", title="Poverty rate"),
             opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.6)),
             tooltip=[
-                alt.Tooltip("state_name:N",  title="State"),
+                alt.Tooltip("state_name:N", title="State"),
                 alt.Tooltip("county_name:N", title="County"),
-                alt.Tooltip("mcsa:Q", title="Weekly childcare cost", format=",.0f"),
-                alt.Tooltip("pr_p:Q", title="Poverty rate",   format=".1f"),
+                alt.Tooltip("mcsa:Q", title="Avg weekly childcare cost", format=",.0f"),
+                alt.Tooltip("pr_p:Q", title="Poverty rate", format=".1f"),
             ],
         )
         .add_params(county_select)
@@ -494,9 +474,8 @@ def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
     # LFPR bars: selected county vs state average
     lfpr_base = (
         alt.Chart(df_panel)
-        .transform_filter(alt.datum.state_group == group_param)
-        .transform_filter(alt.datum.study_year  == year_param)
-        .transform_filter(state_select)
+        .transform_filter(alt.datum.state_name == state_param)
+        .transform_filter(alt.datum.study_year == year_param)
     )
 
     county_bar = (
@@ -505,8 +484,8 @@ def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
         .transform_calculate(label='"Selected county"')
         .mark_bar()
         .encode(
-            x=alt.X("label:N",        title=""),
-            y=alt.Y("flfpr_20to64:Q", title="Female LFPR (20–64)"),
+            x=alt.X("label:N", title=""),
+            y=alt.Y("flfpr_20to64:Q", title="Female LFPR (20-64)"),
         )
     )
 
@@ -517,14 +496,14 @@ def make_county_dashboard(geo_merged_json: dict) -> alt.HConcatChart:
         .mark_bar(color="orange")
         .encode(
             x=alt.X("label:N", title=""),
-            y=alt.Y("state_avg:Q", title="Female LFPR (20-64)"),
+            y=alt.Y("state_avg:Q", title="Female LFPR (20–64)"),
         )
     )
 
     lfpr_chart = (county_bar + state_bar).properties(width=350, height=200)
 
     return (
-        alt.hconcat(map_chart, alt.vconcat(scatter, lfpr_chart))
-        .add_params(year_param, group_param)
+        alt.hconcat(state_map, alt.vconcat(scatter, lfpr_chart))
+        .add_params(year_param, state_param)
         .resolve_scale(color="shared")
     )
