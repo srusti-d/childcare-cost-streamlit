@@ -141,5 +141,5 @@ st.markdown(
     """
 )
 
-dashboard = charts.make_county_dashboard(data["geo_merged"])
+dashboard = charts.make_county_dashboard(data["geo_merged_json"])
 st.altair_chart(dashboard, use_container_width=False)
