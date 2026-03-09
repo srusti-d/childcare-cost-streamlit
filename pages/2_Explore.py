@@ -98,10 +98,10 @@ with broader socioeconomic conditions across the United States.
 # st.altair_chart(choropleth, use_container_width=False)
 
 st.write(Image.open('images/2008_choropleth_screenshot.png'))
-st.caption("Figure 3: Static image of interactive choropleth map with slider at *2008* year displaying changes in childcare cost, poverty rate, and female labor force participation rate across the United States.")
+st.caption("Figure 2: Static image of interactive choropleth map with slider at *2008* year displaying changes in childcare cost, poverty rate, and female labor force participation rate across the United States.")
 
 st.write(Image.open('images/2018_choropleth_screenshot.png'))
-st.caption("Figure 4: Static image of interactive choropleth map with slider at *2018* year displaying changes in childcare cost, poverty rate, and female labor force participation rate across the United States.")
+st.caption("Figure 3: Static image of interactive choropleth map with slider at *2018* year displaying changes in childcare cost, poverty rate, and female labor force participation rate across the United States.")
 st.write("*Note:* Our original interactive visualization allows for the year slider to be directly adjusted by the viewer, enabling a personalized interaction experience showing patterns in missing data, but due to streamlit incompatibility issues, we are displaying static images of the first and last year for the plot in this report. The interactive plot also contains a tooltip enabling details of state-specific metrics to be shown.")
 
 with st.expander("Key findings", expanded=False):
@@ -181,7 +181,7 @@ urb_rural = charts.make_urban_rural_state_maps(
 
 )
 st.altair_chart(urb_rural, use_container_width=False)
-st.caption("Figure 5: Static plot displaying state maps for the rural and urban sample we selected, with a tooltip showing county-level metrics for three socioeconomic variables.")
+st.caption("Figure 4: Static plot displaying state maps for the rural and urban sample we selected, with a tooltip showing county-level metrics for three socioeconomic variables.")
 
 with st.expander("Key findings", expanded=False):
     st.markdown(
@@ -232,7 +232,7 @@ The overlaid trend lines show whether the relationship differs across county typ
 
 heatmaps = charts.make_heatmap_stacked(data["county_avg"])
 st.altair_chart(heatmaps, use_container_width=False)
-st.caption("Figure 6: Combined heatmap and line plot displaying urban-rural differences in childcare cost versus poverty rate and female LFPR, respectively")
+st.caption("Figure 5: Combined heatmap and line plot displaying urban-rural differences in childcare cost versus poverty rate and female LFPR, respectively")
 with st.expander("Key findings", expanded=False):
     st.markdown(
         """
@@ -278,7 +278,7 @@ economic conditions at the county level.**
 st.markdown("##### State Map Dashboard with County-Level Childcare Cost, Poverty Rate, and Female LFPR Exploration")
 dashboard = charts.make_county_dashboard(data["geo_merged_json"])
 st.altair_chart(dashboard, use_container_width=False)
-st.caption("Figure 7: Interactive dashboard displaying state-specific maps, with clickable counties and their county-specific poverty rate and female labor force participation rate as related to childcare cost.")
+st.caption("Figure 6: Interactive dashboard displaying state-specific maps, with clickable counties and their county-specific poverty rate and female labor force participation rate as related to childcare cost.")
 
 with st.expander("Key findings", expanded=False):
     st.markdown(
