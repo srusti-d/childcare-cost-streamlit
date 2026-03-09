@@ -8,10 +8,9 @@ st.info("Dataset: [National Database of Childcare Prices](https://github.com/rfo
 st.write("The primary dataset used in this analysis is the county-level childcare cost dataset, which was gathered and made available in structured format through the TidyTuesday repository but originally sourced from the National Database of Childcare Prices as described in the repository README. " \
 "The unit of observation is the county-year level, allowing for both cross-sectional and longitudinal analysis. Each observation corresponds to a specific U.S. county in a given year between 2008 and 2018. The dataset includes detailed measures of weekly childcare prices for different age groups and care types, including center-based and family childcare arrangements. For consistency across counties and years, our primary cost measure focuses on median weekly center-based care for school-age children (variable = 'mcsa'). This variable serves as our central indicator of childcare pricing. To contextualize childcare costs within broader economic conditions, the dataset also includes several socioeconomic indicators derived from the American Community Survey. These include family poverty rates (pr_f) and female labor force participation rates for individuals aged 20–64 (flfpr_20to64). These variables allow us to examine the relationship between childcare prices, economic vulnerability, and women’s labor supply. In addition, we incorporate a Rural–Urban Continuum Code (RUCC 2023) dataset to classify counties based on their degree of urbanization. Counties are categorized as Urban if their RUCC code is 3 or below and Rural otherwise. This classification enables systematic comparison between predominantly urban and predominantly rural areas.")
 
-
+st.subheader("**Research Question and Methodology**")
 st.write(
     """
-**Research Question and Methodology**
 
 Our research question can be broken down into three core components:
 
