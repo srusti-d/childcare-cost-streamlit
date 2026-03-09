@@ -5,14 +5,13 @@ import geopandas as gpd
 from shapely.geometry import shape
 
 
-# Functions for preprocessing
 
 def _fix_fips_digits(val) -> str:
     """Zero-pad a FIPS code to exactly 5 digits."""
     val = str(val)
     if len(val) == 5:
         return val
-    elif len(val) == 4:
+    if len(val) == 4:
         return "0" + val
     return "Incorrect Digits"
 
@@ -40,7 +39,8 @@ def _transform_coords(coords, fx):
 
 def normalize_features_to_unit_box(features: list, pad: float = 0.03) -> list:
     """
-    Normalise all geometries in *features* so they fill a [0,1] by [0,1] box for the state-specific maps.
+    Normalise all geometries in *features* so they fill a [0,1] by [0,1] box
+    for state-specific maps.
     """
     xs, ys = [], []
     for feat in features:
@@ -69,76 +69,73 @@ def normalize_features_to_unit_box(features: list, pad: float = 0.03) -> list:
         out.append(feat2)
     return out
 
-# Data loading
+
 
 def load_raw_data(
     childcare_path: str = "./data/childcare_costs.csv",
-    counties_path:  str = "./data/counties.csv",
+    counties_path: str = "./data/counties.csv",
     rucc_path: str = "./data/Ruralurbancontinuumcodes2023.csv",
     geojson_path: str = "./data/geojson-counties-fips.json",
 ) -> dict:
     """
     Load every raw data source and return them in a dict keyed by name.
     """
-    child_data  = pd.read_csv(childcare_path)
+    child_data = pd.read_csv(childcare_path)
     county_data = pd.read_csv(counties_path)
-    rucc        = pd.read_csv(rucc_path, encoding="latin1")
+    rucc = pd.read_csv(rucc_path, encoding="latin1")
 
     with open(geojson_path, "r") as f:
         geo_counties_raw = json.load(f)
 
-    # Retuern 5-digit fips5 property on every GeoJSON feature
+    # Return 5-digit fips5 property on every GeoJSON feature
     for feature in geo_counties_raw["features"]:
         p = feature["properties"]
         p["fips5"] = str(p["STATE"]).zfill(2) + str(p["COUNTY"]).zfill(3)
 
-    # Build a DataFrame from the GeoJSON features
     feats = geo_counties_raw["features"]
-    US_map_df = pd.DataFrame({
-        "features":         feats,
-        "geometry":         [f["geometry"]            for f in feats],
-        "county_name":      [f["properties"]["NAME"]  for f in feats],
-        "county_fips_code": [f["properties"]["fips5"] for f in feats],
-        "county_id":        [f["properties"]["COUNTY"] for f in feats],
-        "state_id":         [f["properties"]["STATE"]  for f in feats],
-    })
+    US_map_df = pd.DataFrame(
+        {
+            "features": feats,
+            "geometry": [f["geometry"] for f in feats],
+            "county_name": [f["properties"]["NAME"] for f in feats],
+            "county_fips_code": [f["properties"]["fips5"] for f in feats],
+            "county_id": [f["properties"]["COUNTY"] for f in feats],
+            "state_id": [f["properties"]["STATE"] for f in feats],
+        }
+    )
 
     return {
-        "child_data":       child_data,
-        "county_data":      county_data,
-        "rucc":             rucc,
-        "US_map_df":        US_map_df,
+        "child_data": child_data,
+        "county_data": county_data,
+        "rucc": rucc,
+        "US_map_df": US_map_df,
         "geo_counties_raw": geo_counties_raw,
     }
 
 
 def preprocess_base(raw: dict) -> dict:
     """
-    Normalise FIPS codes, get state_id.
+    Normalise FIPS codes, get state_id, merge child + county, attach state_name to map.
     """
-    child_data  = raw["child_data"].copy()
+    child_data = raw["child_data"].copy()
     county_data = raw["county_data"].copy()
-    US_map_df   = raw["US_map_df"].copy()
+    US_map_df = raw["US_map_df"].copy()
 
-    # Normalise FIPS
-    child_data["county_fips_code"]  = child_data["county_fips_code"].apply(_fix_fips_digits)
+    child_data["county_fips_code"] = child_data["county_fips_code"].apply(_fix_fips_digits)
     county_data["county_fips_code"] = county_data["county_fips_code"].apply(_fix_fips_digits)
 
-    # Derive state_id from county FIPS (first 2 chars)
-    child_data["state_id"]  = child_data["county_fips_code"].str[:2]
+    child_data["state_id"] = child_data["county_fips_code"].str[:2]
     county_data["state_id"] = county_data["county_fips_code"].str[:2]
 
-    # County-level join: child_data gets state_name, county_name, etc.
     data_merged = child_data.merge(
         county_data, on="county_fips_code", how="left", suffixes=("", "_county")
     )
-    # Consolidate state_id if both sides supplied it
+
     if "state_id_county" in data_merged.columns:
         data_merged["state_id"] = data_merged["state_id"].fillna(
             data_merged.pop("state_id_county")
         )
 
-    # Get state_name into the map DataFrame
     state_name_map = (
         data_merged[["state_id", "state_name"]]
         .drop_duplicates()
@@ -147,10 +144,10 @@ def preprocess_base(raw: dict) -> dict:
     US_map_df = US_map_df.merge(state_name_map, on="state_id", how="left")
 
     return {
-        "child_data":  child_data,
+        "child_data": child_data,
         "county_data": county_data,
         "data_merged": data_merged,
-        "US_map_df":   US_map_df,
+        "US_map_df": US_map_df,
     }
 
 
@@ -181,7 +178,7 @@ def build_state_metrics(data_merged: pd.DataFrame) -> pd.DataFrame:
 def build_geo_features(US_map_df: pd.DataFrame, state_metrics: pd.DataFrame) -> list:
     """
     Dissolve county geometries to state level, merge with state_metrics, and
-    return a flat list of GeoJSON features. mcsa_mean, pr_f_mean, flfpr_20to64_mean.
+    return a flat list of GeoJSON features with mcsa_mean, pr_f_mean, flfpr_20to64_mean.
     """
     gdf = gpd.GeoDataFrame(
         US_map_df[["county_name", "county_fips_code", "county_id", "state_id"]],
@@ -217,8 +214,7 @@ def build_geo_features(US_map_df: pd.DataFrame, state_metrics: pd.DataFrame) -> 
 
 def build_rucc_panel(data_merged: pd.DataFrame, rucc: pd.DataFrame) -> pd.DataFrame:
     """
-    Attach Rural-Urban Continuum Codes (2023) to data_merged, derive a binary
-    urbanicity_rucc label (Urban / Rural), and drop unmatched rows.
+    Attach RUCC 2023 codes, derive binary urbanicity_rucc label, drop unmatched.
     """
     rucc_2023 = (
         rucc.loc[rucc["Attribute"] == "RUCC_2023", ["FIPS", "Value"]]
@@ -226,8 +222,7 @@ def build_rucc_panel(data_merged: pd.DataFrame, rucc: pd.DataFrame) -> pd.DataFr
         .assign(
             county_fips_code=lambda d: d["FIPS"].astype(str).str.zfill(5),
             RUCC_2023=lambda d: pd.to_numeric(d["Value"], errors="coerce"),
-        )
-        [["county_fips_code", "RUCC_2023"]]
+        )[["county_fips_code", "RUCC_2023"]]
         .drop_duplicates()
     )
 
@@ -248,16 +243,21 @@ def build_sample_county_avg(
     """
     if sample_states is None:
         sample_states = [
-            "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
-            "Massachusetts", "California", "Arizona", "Delaware" #urban
+            "North Dakota",
+            "Kansas",
+            "Oklahoma",
+            "Vermont",  # rural
+            "Massachusetts",
+            "California",
+            "Arizona",
+            "Delaware",  # urban
         ]
 
     COST, WLF, POV = "mcsa", "flfpr_20to64", "pr_p"
     df_sample = df_rucc_valid[df_rucc_valid["state_name"].isin(sample_states)].copy()
 
     county_avg = (
-        df_sample
-        .groupby(
+        df_sample.groupby(
             ["county_fips_code", "state_name", "state_id", "county_name", "urbanicity_rucc"],
             dropna=False,
         )[[COST, WLF, POV]]
@@ -267,21 +267,20 @@ def build_sample_county_avg(
     county_avg["county_fips_code"] = county_avg["county_fips_code"].astype(str).str.zfill(5)
 
     state_avg = (
-        county_avg
-        .groupby(["state_name"], dropna=False)[[COST, WLF, POV]]
+        county_avg.groupby(["state_name"], dropna=False)[[COST, WLF, POV]]
         .mean()
         .reset_index()
     )
 
     return county_avg, state_avg
 
+
 def build_geo_merged(
     df_rucc_valid: pd.DataFrame,
     geo_counties_raw: dict,
 ) -> gpd.GeoDataFrame:
     """
-    Build a county-level GeoDataFrame for per-year child
-    data metrics and urbanicity labels.
+    Build a county-level GeoDataFrame for per-year child data metrics and urbanicity labels.
     """
     rural_states = ["North Dakota", "Kansas", "Oklahoma", "Vermont"]
     urban_states = ["Massachusetts", "California", "Arizona", "Delaware"]
@@ -290,7 +289,7 @@ def build_geo_merged(
     gdf_counties = gpd.GeoDataFrame(
         {
             "county_fips_code": [f["properties"]["fips5"] for f in feats],
-            "county_name":      [f["properties"]["NAME"]  for f in feats],
+            "county_name": [f["properties"]["NAME"] for f in feats],
         },
         geometry=[shape(f["geometry"]) for f in feats],
         crs="EPSG:4326",
@@ -300,14 +299,19 @@ def build_geo_merged(
     def assign_group(state):
         if state in rural_states:
             return "Rural"
-        elif state in urban_states:
+        if state in urban_states:
             return "Urban"
-        else:
-            return None
+        return None
 
     keep_cols = [
-        "county_fips_code", "state_name", "state_id",
-        "study_year", "mcsa", "pr_p", "flfpr_20to64", "urbanicity_rucc",
+        "county_fips_code",
+        "state_name",
+        "state_id",
+        "study_year",
+        "mcsa",
+        "pr_p",
+        "flfpr_20to64",
+        "urbanicity_rucc",
     ]
     child_small = df_rucc_valid[keep_cols].copy()
     child_small["county_fips_code"] = child_small["county_fips_code"].astype(str).str.zfill(5)
@@ -320,55 +324,57 @@ def build_geo_merged(
 def build_cost_trend(data_merged: pd.DataFrame) -> pd.DataFrame:
     """
     National average childcare cost (mcsa) per study year across all counties.
-
-    Returns
-    -------
-    pd.DataFrame  columns: study_year, mcsa
     """
     return data_merged.groupby("study_year")["mcsa"].mean().reset_index()
 
 
 def load_and_preprocess_all(
-    childcare_path: str  = "./data/childcare_costs.csv",
-    counties_path:  str  = "./data/counties.csv",
-    rucc_path:      str  = "./data/Ruralurbancontinuumcodes2023.csv",
-    geojson_path:   str  = "./data/geojson-counties-fips.json",
-    sample_states:  list | None = None,
+    childcare_path: str = "./data/childcare_costs.csv",
+    counties_path: str = "./data/counties.csv",
+    rucc_path: str = "./data/Ruralurbancontinuumcodes2023.csv",
+    geojson_path: str = "./data/geojson-counties-fips.json",
+    sample_states: list | None = None,
 ) -> dict:
     """
     Run the full preprocessing and return every dataframe version needed by charts.py.
     """
     if sample_states is None:
         sample_states = [
-            "North Dakota", "Kansas", "Oklahoma", "Vermont", # rural
-            "Massachusetts", "California", "Arizona", "Delaware", # urban
+            "North Dakota",
+            "Kansas",
+            "Oklahoma",
+            "Vermont",  # rural
+            "Massachusetts",
+            "California",
+            "Arizona",
+            "Delaware",  # urban
         ]
 
-    raw  = load_raw_data(childcare_path, counties_path, rucc_path, geojson_path)
+    raw = load_raw_data(childcare_path, counties_path, rucc_path, geojson_path)
     base = preprocess_base(raw)
-    dm   = base["data_merged"]
+    dm = base["data_merged"]
 
-    state_metrics  = build_state_metrics(dm)
-    geo_features   = build_geo_features(base["US_map_df"], state_metrics)
-    df_rucc_valid  = build_rucc_panel(dm, raw["rucc"])
+    state_metrics = build_state_metrics(dm)
+    geo_features = build_geo_features(base["US_map_df"], state_metrics)
+    df_rucc_valid = build_rucc_panel(dm, raw["rucc"])
     county_avg, state_avg = build_sample_county_avg(df_rucc_valid, sample_states)
-    geo_merged     = build_geo_merged(df_rucc_valid, raw["geo_counties_raw"])
-    geo_merged_json   = json.loads(geo_merged.to_json())
-    cost_trend     = build_cost_trend(dm)
+    geo_merged = build_geo_merged(df_rucc_valid, raw["geo_counties_raw"])
+    geo_merged_json = json.loads(geo_merged.to_json())
+    cost_trend = build_cost_trend(dm)
 
     return {
-        "child_data":       base["child_data"],
-        "county_data":      base["county_data"],
-        "data_merged":      dm,
-        "US_map_df":        base["US_map_df"],
-        "state_metrics":    state_metrics,
-        "geo_features":     geo_features,
-        "df_rucc_valid":    df_rucc_valid,
-        "county_avg":       county_avg,
-        "state_avg":        state_avg,
-        "geo_merged":       geo_merged,
-        "cost_trend":       cost_trend,
+        "child_data": base["child_data"],
+        "county_data": base["county_data"],
+        "data_merged": dm,
+        "US_map_df": base["US_map_df"],
+        "state_metrics": state_metrics,
+        "geo_features": geo_features,
+        "df_rucc_valid": df_rucc_valid,
+        "county_avg": county_avg,
+        "state_avg": state_avg,
+        "geo_merged": geo_merged,
+        "cost_trend": cost_trend,
         "geo_counties_raw": raw["geo_counties_raw"],
-        "geo_merged_json":  geo_merged_json,
-        "sample_states":    sample_states,
+        "geo_merged_json": geo_merged_json,
+        "sample_states": sample_states,
     }
