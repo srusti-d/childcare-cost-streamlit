@@ -409,44 +409,41 @@ def make_county_dashboard(geo_merged):
 
     county_select = alt.selection_point(fields=["county_fips_code"])
 
-    # County map
+    # County map 
     state_map = (
-        alt.Chart(alt.Data(values=geo_features))
-        .mark_geoshape(stroke="#333333", strokeWidth=0.4)
-        .transform_filter("datum.properties.state_name === state_param")
-        .transform_filter("datum.properties.study_year === year_param")
-        .transform_calculate(
-            county_fips_code="datum.properties.county_fips_code",
-            county_name="datum.properties.county_name",
-            state_name="datum.properties.state_name",
-            mcsa="datum.properties.mcsa",
-            pr_p="datum.properties.pr_p",
-            flfpr_20to64="datum.properties.flfpr_20to64"
-        )
-        .encode(
-            color=alt.Color(
-                "mcsa:Q",
-                title="Childcare cost",
-                scale=alt.Scale(scheme="blues", reverse=True),
-            ),
-            opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.5)),
-            tooltip=[
-                alt.Tooltip("state_name:N", title="State"),
-                alt.Tooltip("county_name:N", title="County"),
-                alt.Tooltip("mcsa:Q", title="Avg weekly childcare cost", format=",.0f"),
-                alt.Tooltip("pr_p:Q", title="Poverty rate", format=".1f"),
-                alt.Tooltip("flfpr_20to64:Q", title="Female LFPR", format=".1f"),
-            ],
-        )
-        .add_params(county_select)
-        .project(type="albersUsa")
-        .properties(
-            width=400, height=500,
-            title=alt.TitleParams(text="County Childcare Cost by State", anchor="middle"),
-        )
+    alt.Chart(alt.Data(values=geo_features))
+    .mark_geoshape(stroke="#333333", strokeWidth=0.4)
+    .transform_filter("datum.properties.state_name === state_param")
+    .transform_filter("datum.properties.study_year === year_param")
+    .transform_calculate(
+        county_fips_code="datum.properties.county_fips_code",
+        county_name="datum.properties.county_name",
+        state_name="datum.properties.state_name",
+        mcsa="datum.properties.mcsa",
+        pr_p="datum.properties.pr_p",
+        flfpr_20to64="datum.properties.flfpr_20to64"
+    )
+    .encode(
+        color=alt.Color(
+            "mcsa:Q",
+            title="Childcare cost",
+            scale=alt.Scale(scheme="blues", reverse=True),
+        ),
+        opacity=alt.condition(county_select, alt.value(1.0), alt.value(0.5)),
+        tooltip=[
+            alt.Tooltip("state_name:N", title="State"),
+            alt.Tooltip("county_name:N", title="County"),
+            alt.Tooltip("mcsa:Q", title="Avg weekly childcare cost", format=",.0f"),
+            alt.Tooltip("pr_p:Q", title="Poverty rate", format=".1f"),
+            alt.Tooltip("flfpr_20to64:Q", title="Female LFPR", format=".1f"),
+        ],
+    )
+    .add_params(county_select)
+    .project(type="albersUsa")
+    .properties(width=400, height=500)
     )
 
-    # Scatter plot
+    #  Scatter plot 
     scatter = (
         alt.Chart(df_panel)
         .mark_circle(size=70)
@@ -464,13 +461,10 @@ def make_county_dashboard(geo_merged):
             ],
         )
         .add_params(county_select)
-        .properties(
-            width=350, height=300,
-            title=alt.TitleParams(text="Childcare Cost vs. Poverty Rate (County-Level)", anchor="middle"),
-        )
+        .properties(width=350, height=300)
     )
 
-    # Base filtered data for LFPR chart
+    # Base filtered data for LFPR chart 
     lfpr_base = (
         alt.Chart(df_panel)
         .transform_filter(alt.datum.state_name == state_param)
@@ -509,13 +503,7 @@ def make_county_dashboard(geo_merged):
 
     lfpr_chart = (
         county_bar + state_bar
-    ).properties(
-        width=350, height=200,
-        title=alt.TitleParams(
-            text="Female Labor Force Participation Rate: County vs State Average",
-            anchor="middle",
-        ),
-    )
+    ).properties(width=350, height=200)
 
     dashboard = (
         alt.hconcat(
@@ -524,7 +512,6 @@ def make_county_dashboard(geo_merged):
         )
         .add_params(year_param, state_param)
         .resolve_scale(color="shared")
-        .configure_title(fontSize=14, anchor="middle")
     )
 
     return dashboard
