@@ -1,7 +1,10 @@
 import streamlit as st
+import altair as alt
+import pandas as pd
 from utils import data_io as io
 import charts
 from PIL import Image
+import copy
 
 GEOJSON_URL = "https://raw.githubusercontent.com/srusti-d/childcare-cost-streamlit/main/data/geojson-counties-fips.json"
 
@@ -275,8 +278,11 @@ economic conditions at the county level.**
 """
 )
 
+# Make dashboard
+
 st.markdown("##### State Map Dashboard with County-Level Childcare Cost, Poverty Rate, and Female LFPR Exploration")
-dashboard = charts.make_county_dashboard(data["geo_merged_json"])
+
+dashboard = charts.make_county_dashboard(data["geo_merged"])
 st.altair_chart(dashboard, use_container_width=False)
 st.caption("Figure 6: Interactive dashboard displaying state-specific maps, with clickable counties and their county-specific poverty rate and female labor force participation rate as related to childcare cost.")
 
