@@ -81,5 +81,7 @@ This will open your own local copy/version of the application.
 ## Authors and Contributors
 
 **Srusti D.** 
+
 **Ornella N.**
+
 **Alex D.**
